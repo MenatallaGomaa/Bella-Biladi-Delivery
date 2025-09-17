@@ -1,10 +1,10 @@
 export default function Hero() {
   return (
-    <div className="overflow-hidden rounded-xl">
+    <div className="overflow-hidden">
       <img
-        src="/hero.jpg"
-        alt="Hero"
-        className="w-full h-56 sm:h-72 object-cover"
+        src="/main.jpeg"
+        alt="Bella Biladi"
+        className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover"
       />
     </div>
   );

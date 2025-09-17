@@ -16,11 +16,9 @@ export default function App() {
   }, []);
 
   const categories = useMemo(() => {
-    const set = new Set([
-      "Beliebt",
-      ...items.map((i) => i.category || "Pizza"),
-    ]);
-    return [...set];
+    const defaults = ["Beliebt", "Pizza", "Pizzabrötchen"];
+    const dynamic = items.map((i) => i.category || "Pizza");
+    return [...new Set([...defaults, ...dynamic])];
   }, [items]);
 
   const grouped = useMemo(() => {
@@ -34,30 +32,31 @@ export default function App() {
   }, [items]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar + Hero are full-width */}
+    <div className="min-h-screen flex flex-col">
+      {/* Navbar stays white */}
       <NavBar />
-      <Hero />
 
-      {/* Main content */}
-      <main className="px-3 py-6 max-w-screen-2xl mx-auto">
-        <div className="bg-amber-200/60 rounded-xl p-6">
+      {/* Orange background wrapper */}
+      <div className="flex-1 bg-amber-200">
+        <Hero />
+
+        <div className="max-w-5xl mx-auto px-3 py-6">
           <h2 className="text-3xl font-bold">BellaBiladi</h2>
           <CategoryPills tabs={categories} active={active} onPick={setActive} />
 
           {/* Category sections */}
           {[...grouped.entries()].map(([cat, list]) => (
             <Section key={cat} title={cat}>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-slate-700 mb-2">
                 Es werden jeweils 8 Stück und einem Dip Ihrer Wahl serviert.
               </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-3 space-y-3">
                 {list.map((it) => (
                   <div
                     key={it._id}
-                    className="bg-white rounded-xl p-3 shadow flex flex-col sm:flex-row sm:items-center sm:justify-between"
+                    className="bg-white p-3 shadow flex items-center justify-between"
                   >
-                    <div className="flex-1">
+                    <div>
                       <div className="font-medium">{it.name}</div>
                       <div className="text-xs text-slate-500">
                         {it.description}
@@ -69,8 +68,8 @@ export default function App() {
                     {it.imageUrl && (
                       <img
                         src={it.imageUrl}
-                        alt={it.name}
-                        className="w-full sm:w-20 sm:h-20 mt-3 sm:mt-0 rounded-lg object-cover"
+                        alt=""
+                        className="w-16 h-16 object-cover"
                       />
                     )}
                   </div>
@@ -79,29 +78,31 @@ export default function App() {
             </Section>
           ))}
         </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="mt-6 py-6 text-xs text-slate-500 border-t">
-        <div className="flex gap-3 mb-3 justify-center">
-          <a href="#" aria-label="x">
-            X
-          </a>
-          <a href="#" aria-label="ig">
-            IG
-          </a>
-          <a href="#" aria-label="fb">
-            FB
-          </a>
-        </div>
-        <div className="text-center">
-          <div className="font-medium">Impressum</div>
-          <div>Bella Biladi</div>
-          <div>Eisdorferstr. 2</div>
-          <div>04115 Leipzig</div>
-          <div>Vertretungsberechtigt: Khalil Mounirhi</div>
-        </div>
-      </footer>
+        {/* Footer inside orange background */}
+        <footer className="mt-6 py-6 text-xs text-slate-700 bg-amber-200">
+          <div className="max-w-5xl mx-auto px-3">
+            <div className="flex gap-3 mb-3">
+              <a href="#" aria-label="x">
+                X
+              </a>
+              <a href="#" aria-label="ig">
+                IG
+              </a>
+              <a href="#" aria-label="fb">
+                FB
+              </a>
+            </div>
+            <div>
+              <div className="font-medium">Impressum</div>
+              <div>Bella Biladi</div>
+              <div>Eisdorferstr. 2</div>
+              <div>04115 Leipzig</div>
+              <div>Vertretungsberechtigt: Khalil Mounirhi</div>
+            </div>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

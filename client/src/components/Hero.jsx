@@ -1,6 +1,7 @@
 export default function Hero() {
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-hidden w-full">
+      {/* Full width hero image */}
       <img
         src="/main.jpeg"
         alt="Bella Biladi"

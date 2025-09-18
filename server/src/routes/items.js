@@ -1,34 +1,27 @@
-import { Router } from "express";
+import express from "express";
 import Item from "../models/Item.js";
-const r = Router();
 
-// public: list active items
-r.get("/", async (_req, res) => {
-  const items = await Item.find({ isActive: true }).sort({
-    category: 1,
-    name: 1,
-  });
-  res.json(items);
+const router = express.Router();
+
+// GET all items
+router.get("/", async (req, res) => {
+  try {
+    const items = await Item.find();
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// admin (for now open): create item
-r.post("/", async (req, res) => {
-  const item = await Item.create(req.body);
-  res.status(201).json(item);
+// POST new item (useful to seed menu)
+router.post("/", async (req, res) => {
+  try {
+    const item = new Item(req.body);
+    await item.save();
+    res.status(201).json(item);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
-// admin: update item
-r.put("/:id", async (req, res) => {
-  const item = await Item.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
-  res.json(item);
-});
-
-// admin: delete
-r.delete("/:id", async (req, res) => {
-  await Item.findByIdAndDelete(req.params.id);
-  res.json({ ok: true });
-});
-
-export default r;
+export default router;

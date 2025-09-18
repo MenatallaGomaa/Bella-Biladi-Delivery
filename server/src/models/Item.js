@@ -1,15 +1,11 @@
 import mongoose from "mongoose";
 
-const ItemSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    description: String,
-    priceCents: { type: Number, required: true },
-    imageUrl: String,
-    category: String,
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true }
-);
+const itemSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: String,
+  priceCents: { type: Number, required: true },
+  category: { type: String, required: true },
+  imageUrl: String,
+});
 
-export default mongoose.model("Item", ItemSchema);
+export default mongoose.model("Item", itemSchema);

@@ -1,25 +1,32 @@
-import "dotenv/config";
 import express from "express";
-import cors from "cors";
 import mongoose from "mongoose";
+import cors from "cors";
+import itemsRoutes from "./routes/items.js";
 
 const app = express();
-app.use(express.json());
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") || "*" }));
 
-app.get("/", (_req, res) => {
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use("/api/items", itemsRoutes);
+
+// Test route
+app.get("/", (req, res) => {
   res.json({ ok: true, name: "bb-server" });
 });
 
-const { MONGO_URL, PORT = 4000 } = process.env;
+// DB connection
+mongoose
+  .connect(process.env.MONGO_URL || "mongodb://localhost:27017/bb", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("✅ Connected to MongoDB"))
+  .catch((err) => console.error("❌ DB error:", err));
 
-try {
-  await mongoose.connect(MONGO_URL);
-  console.log("✅ Connected to MongoDB");
-  app.listen(PORT, () =>
-    console.log(`🚀 API running on http://localhost:${PORT}`)
-  );
-} catch (err) {
-  console.error("❌ Failed to start server", err);
-  process.exit(1);
-}
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () =>
+  console.log(`🚀 API running on http://localhost:${PORT}`)
+);

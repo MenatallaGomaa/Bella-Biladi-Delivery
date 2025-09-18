@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, euro } from "./api";
+import { api } from "./api";
 import NavBar from "./components/NavBar";
 import Hero from "./components/Hero";
 import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
-import { ProductCard } from "./components/ProductCard";
 import "./index.css";
 
 export default function App() {
@@ -33,10 +32,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navbar stays white */}
       <NavBar />
 
-      {/* Orange background wrapper */}
       <div className="flex-1 bg-amber-200">
         <Hero />
 
@@ -44,54 +41,19 @@ export default function App() {
           <h2 className="text-3xl font-bold">BellaBiladi</h2>
           <CategoryPills tabs={categories} active={active} onPick={setActive} />
 
-          {/* Category sections */}
+          {/* Render grouped sections */}
           {[...grouped.entries()].map(([cat, list]) => (
-            <Section key={cat} title={cat}>
-              <div className="text-xs text-slate-700 mb-2">
-                Es werden jeweils 8 Stück und einem Dip Ihrer Wahl serviert.
-              </div>
-              <div className="mt-3 space-y-3">
-                {list.map((it) => (
-                  <div
-                    key={it._id}
-                    className="bg-white p-3 shadow flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-medium">{it.name}</div>
-                      <div className="text-xs text-slate-500">
-                        {it.description}
-                      </div>
-                      <div className="text-sm mt-1 font-semibold">
-                        {euro(it.priceCents)}
-                      </div>
-                    </div>
-                    {it.imageUrl && (
-                      <img
-                        src={it.imageUrl}
-                        alt=""
-                        className="w-16 h-16 object-cover"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Section>
+            <Section key={cat} title={cat} items={list} />
           ))}
         </div>
 
-        {/* Footer inside orange background */}
+        {/* Footer */}
         <footer className="mt-6 py-6 text-xs text-slate-700 bg-amber-200">
           <div className="max-w-5xl mx-auto px-3">
             <div className="flex gap-3 mb-3">
-              <a href="#" aria-label="x">
-                X
-              </a>
-              <a href="#" aria-label="ig">
-                IG
-              </a>
-              <a href="#" aria-label="fb">
-                FB
-              </a>
+              <a href="#">X</a>
+              <a href="#">IG</a>
+              <a href="#">FB</a>
             </div>
             <div>
               <div className="font-medium">Impressum</div>

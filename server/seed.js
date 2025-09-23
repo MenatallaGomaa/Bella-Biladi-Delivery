@@ -1,39 +1,49 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
 import Item from "./src/models/Item.js";
 
-async function seed() {
+dotenv.config();
+
+const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost:27017/bb";
+
+const items = [
+  {
+    name: "Pizza Biladi",
+    description: "Unsere Spezialität mit frischem Gemüse",
+    priceCents: 799,
+    category: "Pizza",
+    imageUrl: "/margherita.jpeg",
+  },
+  {
+    name: "Pizzabrötchen Käse",
+    description: "Es werden jeweils 8 Stück und einem Dip Ihrer Wahl serviert",
+    priceCents: 640,
+    category: "Pizzabrötchen",
+    imageUrl: "/pizzabroetchen.jpeg",
+  },
+  {
+    name: "Tajin",
+    description: "Pasta mit Käse",
+    priceCents: 930,
+    category: "Beliebt",
+    imageUrl: "/tajin.jpeg",
+  },
+];
+
+(async () => {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(
-      process.env.MONGO_URL || "mongodb://localhost:27017/bb",
-      {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      }
-    );
+    await mongoose.connect(MONGO_URL);
     console.log("✅ Connected to MongoDB");
 
-    // Clear existing items
     await Item.deleteMany({});
-    console.log("🗑️ Old items deleted");
+    console.log("🗑️ Old items cleared");
 
-    // Insert 1 Pizza Margherita
-    const margherita = new Item({
-      name: "Pizza Margherita",
-      description: "Klassische Pizza mit Tomaten und Käse",
-      priceCents: 640,
-      category: "Pizza",
-      imageUrl: "/images/margherita.jpeg", // ✅ Must match your server/public/margherita.jpeg
-    });
+    await Item.insertMany(items);
+    console.log("🍕 Items seeded successfully!");
 
-    await margherita.save();
-    console.log("🍕 Pizza Margherita added!");
-
-    process.exit();
+    process.exit(0);
   } catch (err) {
-    console.error("❌ Seed error:", err);
+    console.error("❌ Seeding error:", err);
     process.exit(1);
   }
-}
-
-seed();
+})();

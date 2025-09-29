@@ -61,15 +61,6 @@ const items = [
     category: "Pizza",
     imageUrl: "/biladi.jpeg",
   },
-
-  // 🔹 Pizzabrötchen
-  {
-    name: "Pizzabrötchen Käse",
-    description: "Es werden jeweils 8 Stück und einem Dip Ihrer Wahl serviert",
-    priceCents: 640,
-    category: "Pizzabrötchen",
-    imageUrl: "/pizzabroetchen.jpeg",
-  },
 ];
 
 (async () => {

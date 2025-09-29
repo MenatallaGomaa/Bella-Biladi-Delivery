@@ -7,34 +7,15 @@ import Section from "./components/Section";
 import "./index.css";
 
 export default function App() {
-  // ✅ Start with fallback so something is always rendered
-  const [items, setItems] = useState([
-    {
-      _id: "1",
-      name: "Pizza Biladi",
-      description: "Unsere Spezialität mit frischem Gemüse",
-      priceCents: 799,
-      category: "Pizza",
-      imageUrl: "/margherita.jpeg",
-    },
-  ]);
+  const [items, setItems] = useState([]);
   const [active, setActive] = useState("Beliebt");
-
-  // Refs to scroll to sections
   const sectionRefs = useRef({});
 
   useEffect(() => {
     api
       .get("/api/items")
-      .then((r) => {
-        if (r.data.length > 0) {
-          setItems(r.data); // replace fallback with DB items
-        }
-      })
-      .catch((err) => {
-        console.warn("⚠️ Backend not ready, keeping fallback:", err.message);
-        // do nothing → fallback remains
-      });
+      .then((r) => setItems(r.data))
+      .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
   }, []);
 
   const categories = useMemo(() => {
@@ -53,7 +34,6 @@ export default function App() {
     return m;
   }, [items]);
 
-  // 🔽 Scroll when category changes
   useEffect(() => {
     if (sectionRefs.current[active]) {
       sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
@@ -62,28 +42,49 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navbar always on top */}
       <NavBar />
-
       <div className="flex-1 bg-amber-200">
         <Hero />
-
         <div className="max-w-5xl mx-auto px-3 py-6">
           <h2 className="text-3xl font-bold">BellaBiladi</h2>
           <CategoryPills tabs={categories} active={active} onPick={setActive} />
 
-          {/* Render grouped sections */}
-          {[...grouped.entries()].map(([cat, list]) => (
+          {/* Force Beliebt first */}
+          {grouped.get("Beliebt") && (
             <Section
-              key={cat}
-              title={cat}
-              items={list}
-              ref={(el) => (sectionRefs.current[cat] = el)} // ✅ save ref
+              key="Beliebt"
+              title="Beliebt"
+              items={grouped.get("Beliebt")}
+              ref={(el) => (sectionRefs.current["Beliebt"] = el)}
+              layout="carousel" // 👈 mark as carousel
             />
-          ))}
+          )}
+
+          {/* Force Pizza second */}
+          {grouped.get("Pizza") && (
+            <Section
+              key="Pizza"
+              title="Pizza"
+              items={grouped.get("Pizza")}
+              ref={(el) => (sectionRefs.current["Pizza"] = el)}
+              layout="grid" // 👈 mark as grid
+            />
+          )}
+
+          {/* Render the rest dynamically */}
+          {[...grouped.entries()]
+            .filter(([cat]) => cat !== "Beliebt" && cat !== "Pizza")
+            .map(([cat, list]) => (
+              <Section
+                key={cat}
+                title={cat}
+                items={list}
+                ref={(el) => (sectionRefs.current[cat] = el)}
+                layout="carousel"
+              />
+            ))}
         </div>
 
-        {/* Footer */}
         <footer className="mt-6 py-6 text-xs text-slate-700 bg-amber-200">
           <div className="max-w-5xl mx-auto px-3">
             <div className="flex gap-3 mb-3">

@@ -9,6 +9,7 @@ import "./index.css";
 export default function App() {
   const [items, setItems] = useState([]);
   const [active, setActive] = useState("Beliebt");
+  const [cart, setCart] = useState([]); // 🛒 Cart state
   const sectionRefs = useRef({});
 
   useEffect(() => {
@@ -34,11 +35,18 @@ export default function App() {
     return m;
   }, [items]);
 
+  // Scroll effect
   useEffect(() => {
     if (sectionRefs.current[active]) {
       sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
     }
   }, [active]);
+
+  // Add to cart handler
+  const handleAddToCart = (item) => {
+    setCart((prev) => [...prev, item]);
+    console.log("🛒 Cart:", [...cart, item]);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -56,7 +64,7 @@ export default function App() {
               title="Beliebt"
               items={grouped.get("Beliebt")}
               ref={(el) => (sectionRefs.current["Beliebt"] = el)}
-              layout="carousel" // 👈 mark as carousel
+              onAddToCart={handleAddToCart}
             />
           )}
 
@@ -67,11 +75,11 @@ export default function App() {
               title="Pizza"
               items={grouped.get("Pizza")}
               ref={(el) => (sectionRefs.current["Pizza"] = el)}
-              layout="grid" // 👈 mark as grid
+              onAddToCart={handleAddToCart}
             />
           )}
 
-          {/* Render the rest dynamically */}
+          {/* Render the rest */}
           {[...grouped.entries()]
             .filter(([cat]) => cat !== "Beliebt" && cat !== "Pizza")
             .map(([cat, list]) => (
@@ -80,9 +88,19 @@ export default function App() {
                 title={cat}
                 items={list}
                 ref={(el) => (sectionRefs.current[cat] = el)}
-                layout="carousel"
+                onAddToCart={handleAddToCart}
               />
             ))}
+        </div>
+
+        {/* Simple cart debug */}
+        <div className="bg-white p-4">
+          <h3 className="font-bold">Cart</h3>
+          {cart.map((item, idx) => (
+            <div key={idx}>
+              {item.name} – {item.priceCents / 100}€
+            </div>
+          ))}
         </div>
 
         <footer className="mt-6 py-6 text-xs text-slate-700 bg-amber-200">

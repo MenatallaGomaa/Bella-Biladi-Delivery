@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useCart } from "../pages/CartContext";
 
 export default function NavBar() {
   const [active, setActive] = useState("Home");
+  const { cart } = useCart();
 
   const links = ["Home", "Cart", "Checkout", "Contact", "Catering"];
 
@@ -12,15 +14,22 @@ export default function NavBar() {
         {links.map((link) => (
           <a
             key={link}
-            href="#"
+            href={`#${link.toLowerCase()}`}
             onClick={() => setActive(link)}
-            className={`text-sm px-2 py-1 rounded transition-colors ${
+            className={`relative text-sm px-2 py-1 rounded transition-colors ${
               active === link
                 ? "bg-amber-200/60 font-medium"
                 : "hover:text-amber-600"
             }`}
           >
             {link}
+
+            {/* Badge only for Cart */}
+            {link === "Cart" && cart.length > 0 && (
+              <span className="absolute -top-2 -right-3 bg-amber-500 text-white text-xs rounded-full px-2">
+                {cart.length}
+              </span>
+            )}
           </a>
         ))}
       </div>

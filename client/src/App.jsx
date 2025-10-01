@@ -4,12 +4,15 @@ import NavBar from "./components/NavBar";
 import Hero from "./components/Hero";
 import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
+import { CartProvider, useCart } from "./pages/CartContext"; // ✅ correct import
+import Cart from "./pages/Cart"; // ✅ new Cart page
 import "./index.css";
 
-export default function App() {
+function MainApp() {
   const [items, setItems] = useState([]);
   const [active, setActive] = useState("Beliebt");
-  const [cart, setCart] = useState([]); // 🛒 Cart state
+  const [page, setPage] = useState("Home"); // 👈 handles switching between Home / Cart
+  const { addToCart } = useCart();
   const sectionRefs = useRef({});
 
   useEffect(() => {
@@ -35,91 +38,92 @@ export default function App() {
     return m;
   }, [items]);
 
-  // Scroll effect
   useEffect(() => {
     if (sectionRefs.current[active]) {
       sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
     }
   }, [active]);
 
-  // Add to cart handler
-  const handleAddToCart = (item) => {
-    setCart((prev) => [...prev, item]);
-    console.log("🛒 Cart:", [...cart, item]);
-  };
-
   return (
     <div className="min-h-screen flex flex-col">
-      <NavBar />
+      <NavBar onNavigate={setPage} /> {/* ✅ navbar can change page */}
       <div className="flex-1 bg-amber-200">
-        <Hero />
-        <div className="max-w-5xl mx-auto px-3 py-6">
-          <h2 className="text-3xl font-bold">BellaBiladi</h2>
-          <CategoryPills tabs={categories} active={active} onPick={setActive} />
+        {page === "Home" && (
+          <>
+            <Hero />
 
-          {/* Force Beliebt first */}
-          {grouped.get("Beliebt") && (
-            <Section
-              key="Beliebt"
-              title="Beliebt"
-              items={grouped.get("Beliebt")}
-              ref={(el) => (sectionRefs.current["Beliebt"] = el)}
-              onAddToCart={handleAddToCart}
-            />
-          )}
-
-          {/* Force Pizza second */}
-          {grouped.get("Pizza") && (
-            <Section
-              key="Pizza"
-              title="Pizza"
-              items={grouped.get("Pizza")}
-              ref={(el) => (sectionRefs.current["Pizza"] = el)}
-              onAddToCart={handleAddToCart}
-            />
-          )}
-
-          {/* Render the rest */}
-          {[...grouped.entries()]
-            .filter(([cat]) => cat !== "Beliebt" && cat !== "Pizza")
-            .map(([cat, list]) => (
-              <Section
-                key={cat}
-                title={cat}
-                items={list}
-                ref={(el) => (sectionRefs.current[cat] = el)}
-                onAddToCart={handleAddToCart}
+            <div className="max-w-5xl mx-auto px-3 py-6">
+              <h2 className="text-3xl font-bold">BellaBiladi</h2>
+              <CategoryPills
+                tabs={categories}
+                active={active}
+                onPick={setActive}
               />
-            ))}
-        </div>
 
-        {/* Simple cart debug */}
-        <div className="bg-white p-4">
-          <h3 className="font-bold">Cart</h3>
-          {cart.map((item, idx) => (
-            <div key={idx}>
-              {item.name} – {item.priceCents / 100}€
-            </div>
-          ))}
-        </div>
+              {/* Force Beliebt first */}
+              {grouped.get("Beliebt") && (
+                <Section
+                  key="Beliebt"
+                  title="Beliebt"
+                  items={grouped.get("Beliebt")}
+                  ref={(el) => (sectionRefs.current["Beliebt"] = el)}
+                  onAddToCart={addToCart}
+                />
+              )}
 
-        <footer className="mt-6 py-6 text-xs text-slate-700 bg-amber-200">
-          <div className="max-w-5xl mx-auto px-3">
-            <div className="flex gap-3 mb-3">
-              <a href="#">X</a>
-              <a href="#">IG</a>
-              <a href="#">FB</a>
+              {/* Force Pizza second */}
+              {grouped.get("Pizza") && (
+                <Section
+                  key="Pizza"
+                  title="Pizza"
+                  items={grouped.get("Pizza")}
+                  ref={(el) => (sectionRefs.current["Pizza"] = el)}
+                  onAddToCart={addToCart}
+                />
+              )}
+
+              {/* Render the rest dynamically */}
+              {[...grouped.entries()]
+                .filter(([cat]) => cat !== "Beliebt" && cat !== "Pizza")
+                .map(([cat, list]) => (
+                  <Section
+                    key={cat}
+                    title={cat}
+                    items={list}
+                    ref={(el) => (sectionRefs.current[cat] = el)}
+                    onAddToCart={addToCart}
+                  />
+                ))}
             </div>
-            <div>
-              <div className="font-medium">Impressum</div>
-              <div>Bella Biladi</div>
-              <div>Eisdorferstr. 2</div>
-              <div>04115 Leipzig</div>
-              <div>Vertretungsberechtigt: Khalil Mounirhi</div>
-            </div>
-          </div>
-        </footer>
+          </>
+        )}
+        {page === "Cart" && <Cart />} {/* ✅ show cart page */}
       </div>
+      <footer className="mt-6 py-6 text-xs text-slate-700 bg-amber-200">
+        <div className="max-w-5xl mx-auto px-3">
+          <div className="flex gap-3 mb-3">
+            <a href="#">X</a>
+            <a href="#">IG</a>
+            <a href="#">FB</a>
+          </div>
+          <div>
+            <div className="font-medium">Impressum</div>
+            <div>Bella Biladi</div>
+            <div>Eisdorferstr. 2</div>
+            <div>04115 Leipzig</div>
+            <div>Vertretungsberechtigt: Khalil Mounirhi</div>
+          </div>
+        </div>
+      </footer>
     </div>
+  );
+}
+
+// ✅ Wrap MainApp with CartProvider
+export default function App() {
+  return (
+    <CartProvider>
+      <MainApp />
+    </CartProvider>
   );
 }

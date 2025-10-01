@@ -4,8 +4,8 @@ import NavBar from "./components/NavBar";
 import Hero from "./components/Hero";
 import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
-import { CartProvider, useCart } from "./pages/CartContext"; // ✅ correct import
-import Cart from "./pages/Cart"; // ✅ new Cart page
+import { CartProvider, useCart } from "./pages/CartContext";
+import Cart from "./pages/Cart";
 import "./index.css";
 
 function MainApp() {
@@ -99,7 +99,8 @@ function MainApp() {
         )}
         {page === "Cart" && <Cart />} {/* ✅ show cart page */}
       </div>
-      <footer className="mt-6 py-6 text-xs text-slate-700 bg-amber-200">
+      {/* ✅ Footer without mt-6 (no extra white gap) */}
+      <footer className="py-6 text-xs text-slate-700 bg-amber-200">
         <div className="max-w-5xl mx-auto px-3">
           <div className="flex gap-3 mb-3">
             <a href="#">X</a>

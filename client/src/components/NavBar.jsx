@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useCart } from "../pages/CartContext";
 
-export default function NavBar() {
+export default function NavBar({ onNavigate }) {
   const [active, setActive] = useState("Home");
   const { cart } = useCart();
 
@@ -10,12 +10,22 @@ export default function NavBar() {
   return (
     <nav className="h-12 flex items-center justify-between bg-white shadow-sm px-4">
       <div className="flex items-center gap-3">
-        <img src="/logo.jpeg" alt="BellaBiladi" className="h-8 w-8" />
+        <img
+          src="/logo.jpeg"
+          alt="BellaBiladi"
+          className="h-8 w-8 cursor-pointer"
+          onClick={() => {
+            setActive("Home");
+            onNavigate("Home");
+          }}
+        />
         {links.map((link) => (
-          <a
+          <button
             key={link}
-            href={`#${link.toLowerCase()}`}
-            onClick={() => setActive(link)}
+            onClick={() => {
+              setActive(link);
+              onNavigate(link);
+            }}
             className={`relative text-sm px-2 py-1 rounded transition-colors ${
               active === link
                 ? "bg-amber-200/60 font-medium"
@@ -23,14 +33,12 @@ export default function NavBar() {
             }`}
           >
             {link}
-
-            {/* Badge only for Cart */}
             {link === "Cart" && cart.length > 0 && (
               <span className="absolute -top-2 -right-3 bg-amber-500 text-white text-xs rounded-full px-2">
                 {cart.length}
               </span>
             )}
-          </a>
+          </button>
         ))}
       </div>
 

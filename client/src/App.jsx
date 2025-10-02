@@ -11,7 +11,12 @@ import "./index.css";
 function MainApp() {
   const [items, setItems] = useState([]);
   const [active, setActive] = useState("Beliebt");
-  const [page, setPage] = useState("Home"); // 👈 handles switching between Home / Cart
+
+  // ✅ Persist page state in localStorage
+  const [page, setPage] = useState(() => {
+    return localStorage.getItem("page") || "Home";
+  });
+
   const { addToCart } = useCart();
   const sectionRefs = useRef({});
 
@@ -21,6 +26,11 @@ function MainApp() {
       .then((r) => setItems(r.data))
       .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
   }, []);
+
+  // ✅ Save page to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("page", page);
+  }, [page]);
 
   const categories = useMemo(() => {
     const defaults = ["Beliebt", "Pizza", "Pizzabrötchen"];
@@ -46,7 +56,8 @@ function MainApp() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <NavBar onNavigate={setPage} /> {/* ✅ navbar can change page */}
+      <NavBar activePage={page} onNavigate={setPage} />{" "}
+      {/* ✅ pass down current page */}
       <div className="flex-1 bg-amber-200">
         {page === "Home" && (
           <>
@@ -97,9 +108,8 @@ function MainApp() {
             </div>
           </>
         )}
-        {page === "Cart" && <Cart />} {/* ✅ show cart page */}
+        {page === "Cart" && <Cart />}
       </div>
-      {/* ✅ Footer without mt-6 (no extra white gap) */}
       <footer className="py-6 text-xs text-slate-700 bg-amber-200">
         <div className="max-w-5xl mx-auto px-3">
           <div className="flex gap-3 mb-3">

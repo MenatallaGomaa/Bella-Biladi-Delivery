@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useCart } from "./CartContext";
 
 export default function Cart() {
-  const { cart, addToCart, setCart } = useCart();
+  const { cart, addToCart, setCart, clearCart } = useCart();
   const [deliveryMode, setDeliveryMode] = useState("Lieferung");
 
   const total = cart.reduce((sum, item) => sum + item.priceCents, 0) / 100;
@@ -26,12 +26,14 @@ export default function Cart() {
   }, {});
 
   return (
-    <div className="bg-amber-200 min-h-screen flex justify-center items-center py-10 px-4">
-      <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-lg flex flex-col max-h-[80vh]">
-        <h2 className="text-3xl font-bold text-center mb-6">Warenkorb</h2>
+    <div className="bg-amber-200 min-h-screen flex justify-center items-center py-4 px-2">
+      <div className="bg-white rounded-xl shadow-md p-4 w-full max-w-lg flex flex-col max-h-[80vh] sm:max-h-[90vh]">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">
+          Warenkorb
+        </h2>
 
         {/* Liefer/Abholung Toggle */}
-        <div className="flex justify-center gap-2 mb-6 shrink-0">
+        <div className="flex justify-center gap-2 mb-4 sm:mb-6 shrink-0">
           <button
             onClick={() => setDeliveryMode("Lieferung")}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg ${
@@ -40,7 +42,7 @@ export default function Cart() {
                 : "bg-gray-200 text-gray-600"
             }`}
           >
-            🚴 Lieferung <span className="text-sm">15–35 min</span>
+            🚴 Lieferung <span className="text-xs sm:text-sm">15–35 min</span>
           </button>
           <button
             onClick={() => setDeliveryMode("Abholung")}
@@ -50,26 +52,28 @@ export default function Cart() {
                 : "bg-gray-200 text-gray-600"
             }`}
           >
-            📦 Abholung <span className="text-sm">15 min</span>
+            📦 Abholung <span className="text-xs sm:text-sm">15 min</span>
           </button>
         </div>
 
         {/* Cart items */}
-        <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+        <div className="space-y-4 flex-1 overflow-y-auto pr-1 sm:pr-2">
           {Object.values(grouped).map((item, idx) => (
             <div
               key={idx}
-              className="flex justify-between items-center border-b pb-3"
+              className="flex justify-between items-center border-b pb-2 sm:pb-3"
             >
-              <div>
+              <div className="text-sm sm:text-base">
                 <div className="font-medium">{item.name}</div>
-                <div className="text-sm text-gray-500">{item.description}</div>
-                <div className="text-sm font-semibold">
+                <div className="text-xs sm:text-sm text-gray-500">
+                  {item.description}
+                </div>
+                <div className="text-xs sm:text-sm font-semibold">
                   {(item.priceCents / 100).toFixed(2)} €
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm">
                 <button
                   onClick={() => removeAll(item.name)}
                   className="text-gray-500 hover:text-red-500"
@@ -94,12 +98,15 @@ export default function Cart() {
           ))}
         </div>
 
-        {/* Total */}
-        <div className="mt-6 flex justify-between items-center shrink-0">
-          <div className="text-lg font-semibold">
+        {/* Total + Checkout */}
+        <div className="mt-4 sm:mt-6 flex justify-between items-center shrink-0">
+          <div className="text-base sm:text-lg font-semibold">
             Zur Kasse {total.toFixed(2)} €
           </div>
-          <button className="bg-amber-400 px-6 py-2 rounded-lg font-semibold hover:bg-amber-500">
+          <button
+            onClick={clearCart}
+            className="bg-amber-400 px-4 sm:px-6 py-2 rounded-lg font-semibold hover:bg-amber-500"
+          >
             Zur Kasse
           </button>
         </div>

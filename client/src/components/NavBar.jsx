@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { useCart } from "../pages/CartContext";
 
-export default function NavBar({ onNavigate }) {
-  const [active, setActive] = useState("Home");
+export default function NavBar({ activePage, onNavigate }) {
   const { cart } = useCart();
 
   const links = ["Home", "Cart", "Checkout", "Contact", "Catering"];
@@ -14,20 +12,14 @@ export default function NavBar({ onNavigate }) {
           src="/logo.jpeg"
           alt="BellaBiladi"
           className="h-8 w-8 cursor-pointer"
-          onClick={() => {
-            setActive("Home");
-            onNavigate("Home");
-          }}
+          onClick={() => onNavigate("Home")}
         />
         {links.map((link) => (
           <button
             key={link}
-            onClick={() => {
-              setActive(link);
-              onNavigate(link);
-            }}
+            onClick={() => onNavigate(link)}
             className={`relative text-sm px-2 py-1 rounded transition-colors ${
-              active === link
+              activePage === link
                 ? "bg-amber-200/60 font-medium"
                 : "hover:text-amber-600"
             }`}

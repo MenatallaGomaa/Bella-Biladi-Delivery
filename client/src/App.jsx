@@ -6,19 +6,23 @@ import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
 import { CartProvider, useCart } from "./pages/CartContext";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import "./index.css";
 
 function MainApp() {
   const [items, setItems] = useState([]);
   const [active, setActive] = useState("Beliebt");
-
-  // ✅ Persist page state in localStorage
-  const [page, setPage] = useState(() => {
-    return localStorage.getItem("page") || "Home";
-  });
-
+  const [page, setPage] = useState(
+    localStorage.getItem("currentPage") || "Home"
+  );
   const { addToCart } = useCart();
   const sectionRefs = useRef({});
+
+  // save page to localStorage + update URL
+  useEffect(() => {
+    localStorage.setItem("currentPage", page);
+    window.history.pushState({}, "", `/${page.toLowerCase()}`);
+  }, [page]);
 
   useEffect(() => {
     api
@@ -26,11 +30,6 @@ function MainApp() {
       .then((r) => setItems(r.data))
       .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
   }, []);
-
-  // ✅ Save page to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem("page", page);
-  }, [page]);
 
   const categories = useMemo(() => {
     const defaults = ["Beliebt", "Pizza", "Pizzabrötchen"];
@@ -56,13 +55,11 @@ function MainApp() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <NavBar activePage={page} onNavigate={setPage} />{" "}
-      {/* ✅ pass down current page */}
+      <NavBar activePage={page} onNavigate={setPage} />
       <div className="flex-1 bg-amber-200">
         {page === "Home" && (
           <>
             <Hero />
-
             <div className="max-w-5xl mx-auto px-3 py-6">
               <h2 className="text-3xl font-bold">BellaBiladi</h2>
               <CategoryPills
@@ -70,8 +67,6 @@ function MainApp() {
                 active={active}
                 onPick={setActive}
               />
-
-              {/* Force Beliebt first */}
               {grouped.get("Beliebt") && (
                 <Section
                   key="Beliebt"
@@ -81,8 +76,6 @@ function MainApp() {
                   onAddToCart={addToCart}
                 />
               )}
-
-              {/* Force Pizza second */}
               {grouped.get("Pizza") && (
                 <Section
                   key="Pizza"
@@ -92,8 +85,6 @@ function MainApp() {
                   onAddToCart={addToCart}
                 />
               )}
-
-              {/* Render the rest dynamically */}
               {[...grouped.entries()]
                 .filter(([cat]) => cat !== "Beliebt" && cat !== "Pizza")
                 .map(([cat, list]) => (
@@ -108,7 +99,8 @@ function MainApp() {
             </div>
           </>
         )}
-        {page === "Cart" && <Cart />}
+        {page === "Cart" && <Cart onNavigate={setPage} />}
+        {page === "Checkout" && <Checkout />}
       </div>
       <footer className="py-6 text-xs text-slate-700 bg-amber-200">
         <div className="max-w-5xl mx-auto px-3">
@@ -130,7 +122,6 @@ function MainApp() {
   );
 }
 
-// ✅ Wrap MainApp with CartProvider
 export default function App() {
   return (
     <CartProvider>

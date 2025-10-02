@@ -20,8 +20,8 @@ export default function NavBar({ activePage, onNavigate }) {
             onClick={() => onNavigate(link)}
             className={`relative text-sm px-2 py-1 rounded transition-colors ${
               activePage === link
-                ? "bg-amber-200/60 font-medium"
-                : "hover:text-amber-600"
+                ? "bg-amber-400 text-black font-semibold" // ✅ active page highlighted
+                : "hover:bg-amber-200 hover:text-black" // ✅ better hover effect
             }`}
           >
             {link}

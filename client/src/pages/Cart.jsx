@@ -1,43 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useCart } from "./CartContext";
 
-export default function Cart() {
+export default function Cart({ onNavigate }) {
   const { cart, addToCart, setCart } = useCart();
   const [deliveryMode, setDeliveryMode] = useState("Lieferung");
 
-  // ✅ Load delivery mode from localStorage on mount
-  useEffect(() => {
-    const savedMode = localStorage.getItem("deliveryMode");
-    if (savedMode) setDeliveryMode(savedMode);
-  }, []);
-
-  // ✅ Save delivery mode to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem("deliveryMode", deliveryMode);
-  }, [deliveryMode]);
-
-  // 🧮 Calculate total
   const total = cart.reduce((sum, item) => sum + item.priceCents, 0) / 100;
 
-  // ➕ Increase quantity
   const increase = (item) => addToCart(item);
 
-  // ➖ Decrease quantity by name
-  const decrease = (name) => {
-    const idx = cart.findIndex((i) => i.name === name);
-    if (idx !== -1) {
-      const newCart = [...cart];
-      newCart.splice(idx, 1);
-      setCart(newCart);
-    }
+  const decrease = (index) => {
+    const newCart = [...cart];
+    newCart.splice(index, 1);
+    setCart(newCart);
   };
 
-  // 🗑️ Remove all of an item
   const removeAll = (name) => {
     setCart(cart.filter((i) => i.name !== name));
   };
 
-  // 📦 Group items by name (with qty)
   const grouped = Object.values(
     cart.reduce((acc, item) => {
       if (!acc[item.name]) {
@@ -83,7 +64,7 @@ export default function Cart() {
         <div className="space-y-4 flex-1 overflow-y-auto pr-2">
           {grouped.map((item) => (
             <div
-              key={item.name} // ✅ stable key so order doesn't jump
+              key={item.name}
               className="flex justify-between items-center border-b pb-3"
             >
               <div>
@@ -102,7 +83,9 @@ export default function Cart() {
                   🗑️
                 </button>
                 <button
-                  onClick={() => decrease(item.name)}
+                  onClick={() =>
+                    decrease(cart.findIndex((i) => i.name === item.name))
+                  }
                   className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300"
                 >
                   −
@@ -124,7 +107,10 @@ export default function Cart() {
           <div className="text-lg font-semibold">
             Zur Kasse {total.toFixed(2)} €
           </div>
-          <button className="bg-amber-400 px-6 py-2 rounded-lg font-semibold hover:bg-amber-500">
+          <button
+            onClick={() => onNavigate("Checkout")}
+            className="bg-amber-400 px-6 py-2 rounded-lg font-semibold hover:bg-amber-500"
+          >
             Zur Kasse
           </button>
         </div>

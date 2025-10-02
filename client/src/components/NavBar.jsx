@@ -6,7 +6,7 @@ export default function NavBar({ activePage, onNavigate }) {
   const links = ["Home", "Cart", "Checkout", "Contact", "Catering"];
 
   return (
-    <nav className="h-12 flex items-center justify-between bg-white shadow-sm px-4">
+    <nav className="h-12 flex items-center justify-between bg-white border-b border-gray-400 px-4">
       <div className="flex items-center gap-3">
         <img
           src="/logo.jpeg"

@@ -30,9 +30,12 @@ export default function Cart({ onNavigate }) {
   );
 
   return (
-    <div className="bg-amber-200 min-h-screen flex justify-center items-center py-10 px-4">
-      <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-lg flex flex-col max-h-[80vh]">
-        <h2 className="text-3xl font-bold text-center mb-6">Warenkorb</h2>
+    <div className="bg-amber-200 full-h-screen flex flex-col">
+      {/* Cart container, now full width + height */}
+      <div className="bg-white flex flex-col w-full h-full p-4 sm:p-6 flex-1">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">
+          Warenkorb
+        </h2>
 
         {/* Liefer/Abholung Toggle */}
         <div className="flex justify-center gap-2 mb-6 shrink-0">
@@ -61,7 +64,7 @@ export default function Cart({ onNavigate }) {
         </div>
 
         {/* Cart items */}
-        <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+        <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
           {grouped.map((item) => (
             <div
               key={item.name}

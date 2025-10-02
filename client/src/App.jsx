@@ -102,7 +102,13 @@ function MainApp() {
         {page === "Cart" && <Cart onNavigate={setPage} />}
         {page === "Checkout" && <Checkout />}
       </div>
-      <footer className="py-6 text-xs text-slate-700 bg-amber-200">
+      <footer
+        className={`py-6 text-xs text-slate-700 ${
+          page === "Cart" || page === "Checkout"
+            ? "bg-white border-t"
+            : "bg-amber-200"
+        }`}
+      >
         <div className="max-w-5xl mx-auto px-3">
           <div className="flex gap-3 mb-3">
             <a href="#">X</a>
@@ -112,9 +118,9 @@ function MainApp() {
           <div>
             <div className="font-medium">Impressum</div>
             <div>Bella Biladi</div>
-            <div>Eisdorferstr. 2</div>
-            <div>04115 Leipzig</div>
-            <div>Vertretungsberechtigt: Khalil Mounirhi</div>
+            <div>Edlichstraße 2</div>
+            <div>04315 Leipzig</div>
+            <div>Vertretungsberechtigt: Khalil Mountahi</div>
           </div>
         </div>
       </footer>

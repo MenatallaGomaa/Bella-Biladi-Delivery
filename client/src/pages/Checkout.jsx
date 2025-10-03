@@ -1,15 +1,14 @@
 export default function Checkout() {
   return (
-    <div className="bg-amber-200 min-h-screen flex justify-center items-center sm:py-10 sm:px-4">
+    <div className="px-0 sm:px-4 py-0 sm:py-6 flex justify-center bg-white sm:bg-amber-200">
       <div
         className="
-    bg-white 
-    w-full h-full        /* fullscreen on mobile */
-    rounded-none shadow-none 
-    sm:rounded-xl sm:shadow-md /* card style on bigger screens */
-    p-4 sm:p-6 
-    flex flex-col justify-center
-  "
+          bg-white 
+          w-full 
+          rounded-none shadow-none
+          sm:max-w-2xl sm:rounded-xl sm:shadow-md
+          p-4 sm:p-6
+        "
       >
         <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">
           Einloggen oder Konto erstellen

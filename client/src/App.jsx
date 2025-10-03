@@ -18,7 +18,6 @@ function MainApp() {
   const { addToCart } = useCart();
   const sectionRefs = useRef({});
 
-  // save page to localStorage + update URL
   useEffect(() => {
     localStorage.setItem("currentPage", page);
     window.history.pushState({}, "", `/${page.toLowerCase()}`);
@@ -54,9 +53,10 @@ function MainApp() {
   }, [active]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col min-h-screen">
       <NavBar activePage={page} onNavigate={setPage} />
-      <div className="flex-1 bg-amber-200">
+
+      <main className="flex-1 bg-amber-200">
         {page === "Home" && (
           <>
             <Hero />
@@ -101,7 +101,8 @@ function MainApp() {
         )}
         {page === "Cart" && <Cart onNavigate={setPage} />}
         {page === "Checkout" && <Checkout />}
-      </div>
+      </main>
+
       <footer
         className={`py-6 text-xs text-slate-700 ${
           page === "Cart" || page === "Checkout"

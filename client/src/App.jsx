@@ -5,6 +5,7 @@ import Hero from "./components/Hero";
 import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
 import { CartProvider, useCart } from "./pages/CartContext";
+import { AuthProvider } from "./pages/AuthContext"; // ✅ Add this import
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import "./index.css";
@@ -18,11 +19,13 @@ function MainApp() {
   const { addToCart } = useCart();
   const sectionRefs = useRef({});
 
+  // ✅ Update URL + persist page
   useEffect(() => {
     localStorage.setItem("currentPage", page);
     window.history.pushState({}, "", `/${page.toLowerCase()}`);
   }, [page]);
 
+  // ✅ Fetch items
   useEffect(() => {
     api
       .get("/api/items")
@@ -30,12 +33,14 @@ function MainApp() {
       .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
   }, []);
 
+  // ✅ Build category list
   const categories = useMemo(() => {
     const defaults = ["Beliebt", "Pizza", "Pizzabrötchen"];
     const dynamic = items.map((i) => i.category || "Pizza");
     return [...new Set([...defaults, ...dynamic])];
   }, [items]);
 
+  // ✅ Group items by category
   const grouped = useMemo(() => {
     const m = new Map();
     items.forEach((i) => {
@@ -46,12 +51,14 @@ function MainApp() {
     return m;
   }, [items]);
 
+  // ✅ Smooth scroll for category selection
   useEffect(() => {
     if (sectionRefs.current[active]) {
       sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
     }
   }, [active]);
 
+  // ✅ Page rendering
   return (
     <div className="flex flex-col min-h-screen">
       <NavBar activePage={page} onNavigate={setPage} />
@@ -103,6 +110,7 @@ function MainApp() {
         {page === "Checkout" && <Checkout />}
       </main>
 
+      {/* ✅ Footer */}
       <footer
         className={`py-6 text-xs text-slate-700 ${
           page === "Cart" || page === "Checkout"
@@ -129,10 +137,13 @@ function MainApp() {
   );
 }
 
+// ✅ Wrap providers (Auth + Cart)
 export default function App() {
   return (
-    <CartProvider>
-      <MainApp />
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <MainApp />
+      </CartProvider>
+    </AuthProvider>
   );
 }

@@ -5,9 +5,11 @@ import Hero from "./components/Hero";
 import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
 import { CartProvider, useCart } from "./pages/CartContext";
-import { AuthProvider } from "./pages/AuthContext"; // ✅ Add this import
+import { AuthProvider } from "./pages/AuthContext";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import "./index.css";
 
 function MainApp() {
@@ -19,13 +21,13 @@ function MainApp() {
   const { addToCart } = useCart();
   const sectionRefs = useRef({});
 
-  // ✅ Update URL + persist page
+  // ✅ Persist current page and update URL
   useEffect(() => {
     localStorage.setItem("currentPage", page);
     window.history.pushState({}, "", `/${page.toLowerCase()}`);
   }, [page]);
 
-  // ✅ Fetch items
+  // ✅ Fetch menu items
   useEffect(() => {
     api
       .get("/api/items")
@@ -51,14 +53,14 @@ function MainApp() {
     return m;
   }, [items]);
 
-  // ✅ Smooth scroll for category selection
+  // ✅ Scroll to active section
   useEffect(() => {
     if (sectionRefs.current[active]) {
       sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
     }
   }, [active]);
 
-  // ✅ Page rendering
+  // ✅ Page rendering logic
   return (
     <div className="flex flex-col min-h-screen">
       <NavBar activePage={page} onNavigate={setPage} />
@@ -68,12 +70,13 @@ function MainApp() {
           <>
             <Hero />
             <div className="max-w-5xl mx-auto px-3 py-6">
-              <h2 className="text-3xl font-bold">BellaBiladi</h2>
+              <h2 className="text-3xl font-bold mb-4">BellaBiladi</h2>
               <CategoryPills
                 tabs={categories}
                 active={active}
                 onPick={setActive}
               />
+
               {grouped.get("Beliebt") && (
                 <Section
                   key="Beliebt"
@@ -83,6 +86,7 @@ function MainApp() {
                   onAddToCart={addToCart}
                 />
               )}
+
               {grouped.get("Pizza") && (
                 <Section
                   key="Pizza"
@@ -92,6 +96,7 @@ function MainApp() {
                   onAddToCart={addToCart}
                 />
               )}
+
               {[...grouped.entries()]
                 .filter(([cat]) => cat !== "Beliebt" && cat !== "Pizza")
                 .map(([cat, list]) => (
@@ -106,14 +111,20 @@ function MainApp() {
             </div>
           </>
         )}
+
         {page === "Cart" && <Cart onNavigate={setPage} />}
         {page === "Checkout" && <Checkout />}
+        {page === "Login" && <Login onNavigate={setPage} />}
+        {page === "Register" && <Register onNavigate={setPage} />}
       </main>
 
       {/* ✅ Footer */}
       <footer
         className={`py-6 text-xs text-slate-700 ${
-          page === "Cart" || page === "Checkout"
+          page === "Cart" ||
+          page === "Checkout" ||
+          page === "Login" ||
+          page === "Register"
             ? "bg-white border-t"
             : "bg-amber-200"
         }`}
@@ -137,7 +148,6 @@ function MainApp() {
   );
 }
 
-// ✅ Wrap providers (Auth + Cart)
 export default function App() {
   return (
     <AuthProvider>

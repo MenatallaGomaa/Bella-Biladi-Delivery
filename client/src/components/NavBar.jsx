@@ -7,6 +7,7 @@ export default function NavBar({ activePage, onNavigate }) {
 
   return (
     <nav className="h-12 flex items-center justify-between bg-white border-b border-gray-400 px-4">
+      {/* Left side — logo + page links */}
       <div className="flex items-center gap-3">
         <img
           src="/logo.jpeg"
@@ -20,8 +21,8 @@ export default function NavBar({ activePage, onNavigate }) {
             onClick={() => onNavigate(link)}
             className={`relative text-sm px-2 py-1 rounded transition-colors ${
               activePage === link
-                ? "bg-amber-400 text-black font-semibold" // ✅ active page highlighted
-                : "hover:bg-amber-200 hover:text-black" // ✅ better hover effect
+                ? "bg-amber-400 text-black font-semibold"
+                : "hover:bg-amber-200 hover:text-black"
             }`}
           >
             {link}
@@ -34,11 +35,18 @@ export default function NavBar({ activePage, onNavigate }) {
         ))}
       </div>
 
+      {/* Right side — auth buttons */}
       <div className="flex items-center gap-2">
-        <button className="text-xs border rounded px-2 py-1 hover:bg-slate-100">
+        <button
+          onClick={() => onNavigate("Login")}
+          className="text-xs border rounded px-2 py-1 hover:bg-slate-100"
+        >
           Sign in
         </button>
-        <button className="text-xs bg-slate-900 text-white rounded px-2 py-1 hover:bg-slate-700">
+        <button
+          onClick={() => onNavigate("Register")}
+          className="text-xs bg-slate-900 text-white rounded px-2 py-1 hover:bg-slate-700"
+        >
           Register
         </button>
       </div>

@@ -7,7 +7,7 @@ export default function NavBar({ activePage, onNavigate }) {
 
   return (
     <nav className="h-12 flex items-center justify-between bg-white border-b border-gray-400 px-4">
-      {/* Left side — logo + page links */}
+      {/* Left side — logo + links */}
       <div className="flex items-center gap-3">
         <img
           src="/logo.jpeg"
@@ -38,13 +38,13 @@ export default function NavBar({ activePage, onNavigate }) {
       {/* Right side — auth buttons */}
       <div className="flex items-center gap-2">
         <button
-          onClick={() => onNavigate("Login")}
+          onClick={() => onNavigate("CheckoutLogin")}
           className="text-xs border rounded px-2 py-1 hover:bg-slate-100"
         >
           Sign in
         </button>
         <button
-          onClick={() => onNavigate("Register")}
+          onClick={() => onNavigate("CheckoutRegister")}
           className="text-xs bg-slate-900 text-white rounded px-2 py-1 hover:bg-slate-700"
         >
           Register

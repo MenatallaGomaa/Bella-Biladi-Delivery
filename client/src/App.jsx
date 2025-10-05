@@ -8,8 +8,6 @@ import { CartProvider, useCart } from "./pages/CartContext";
 import { AuthProvider } from "./pages/AuthContext";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
 import "./index.css";
 
 function MainApp() {
@@ -21,7 +19,7 @@ function MainApp() {
   const { addToCart } = useCart();
   const sectionRefs = useRef({});
 
-  // ✅ Persist current page and update URL
+  // ✅ Save current page to localStorage
   useEffect(() => {
     localStorage.setItem("currentPage", page);
     window.history.pushState({}, "", `/${page.toLowerCase()}`);
@@ -35,7 +33,7 @@ function MainApp() {
       .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
   }, []);
 
-  // ✅ Build category list
+  // ✅ Category list
   const categories = useMemo(() => {
     const defaults = ["Beliebt", "Pizza", "Pizzabrötchen"];
     const dynamic = items.map((i) => i.category || "Pizza");
@@ -53,25 +51,44 @@ function MainApp() {
     return m;
   }, [items]);
 
-  // ✅ Scroll to active section
+  // ✅ Smooth scroll to section when category is selected
   useEffect(() => {
     if (sectionRefs.current[active]) {
       sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
     }
   }, [active]);
 
-  // ✅ Page rendering logic
+  // ✅ Control Navbar and Footer visibility
+  const hideNav =
+    page === "Checkout" ||
+    page === "CheckoutLogin" ||
+    page === "CheckoutRegister";
+
+  const hideFooter =
+    page === "Checkout" ||
+    page === "CheckoutLogin" ||
+    page === "CheckoutRegister" ||
+    page === "Cart";
+
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Always show navbar */}
-      <NavBar activePage={page} onNavigate={setPage} />
+      {/* ✅ Navbar visible on Cart */}
+      {!hideNav && <NavBar activePage={page} onNavigate={setPage} />}
 
-      <main className="flex-1">
+      <main
+        className={`flex-1 ${
+          page === "Cart"
+            ? "bg-amber-200 flex justify-center items-center overflow-hidden"
+            : ""
+        }`}
+      >
+        {/* ✅ Home Page */}
         {page === "Home" && (
           <div className="bg-amber-200">
             <Hero />
             <div className="max-w-5xl mx-auto px-3 py-6">
               <h2 className="text-3xl font-bold mb-4">BellaBiladi</h2>
+
               <CategoryPills
                 tabs={categories}
                 active={active}
@@ -113,21 +130,26 @@ function MainApp() {
           </div>
         )}
 
-        {page === "Cart" && <Cart onNavigate={setPage} />}
-        {page === "Checkout" && <Checkout />}
-        {page === "Login" && <Login onNavigate={setPage} />}
-        {page === "Register" && <Register onNavigate={setPage} />}
+        {/* ✅ Cart Page (with visible navbar, hidden footer) */}
+        {page === "Cart" && (
+          <div className="flex justify-center items-center w-full min-h-screen bg-amber-200">
+            <Cart onNavigate={setPage} />
+          </div>
+        )}
+
+        {/* ✅ Checkout Pages */}
+        {page === "Checkout" && <Checkout onNavigate={setPage} />}
+        {page === "CheckoutLogin" && (
+          <Checkout onNavigate={setPage} initialMode="login" />
+        )}
+        {page === "CheckoutRegister" && (
+          <Checkout onNavigate={setPage} initialMode="register" />
+        )}
       </main>
 
-      {/* ✅ Hide footer on auth pages */}
-      {page !== "Login" && page !== "Register" && (
-        <footer
-          className={`py-6 text-xs text-slate-700 ${
-            page === "Cart" || page === "Checkout"
-              ? "bg-white border-t"
-              : "bg-amber-200"
-          }`}
-        >
+      {/* ✅ Hide footer on Cart and Checkout pages */}
+      {!hideFooter && (
+        <footer className="py-6 text-xs text-slate-700 bg-white border-t">
           <div className="max-w-5xl mx-auto px-3">
             <div className="flex gap-3 mb-3">
               <a href="#">X</a>

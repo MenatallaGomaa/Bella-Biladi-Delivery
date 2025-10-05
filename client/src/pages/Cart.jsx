@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useCart } from "./CartContext"; // ✅ make sure this is here
+import { useState, useEffect } from "react";
+import { useCart } from "./CartContext";
 
 export default function Cart({ onNavigate }) {
   const { cart, addToCart, setCart } = useCart();
@@ -21,17 +21,42 @@ export default function Cart({ onNavigate }) {
 
   const grouped = Object.values(
     cart.reduce((acc, item) => {
-      if (!acc[item.name]) {
-        acc[item.name] = { ...item, qty: 0 };
-      }
+      if (!acc[item.name]) acc[item.name] = { ...item, qty: 0 };
       acc[item.name].qty++;
       return acc;
     }, {})
   );
 
+  // ✅ Prevent page scroll (keep fixed height)
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => (document.body.style.overflow = "auto");
+  }, []);
+
   return (
-    <div className="bg-amber-200 flex justify-center px-4 py-6 min-h-screen sm:min-h-0">
-      <div className="bg-white w-full max-w-3xl rounded-lg shadow p-4 sm:p-6 flex flex-col">
+    <div
+      className="
+        bg-amber-200 
+        flex justify-center items-center 
+        min-h-screen 
+        px-4 py-6 
+        overflow-hidden
+      "
+    >
+      <div
+        className="
+          bg-white 
+          w-full 
+          max-w-3xl 
+          rounded-lg 
+          shadow-md 
+          p-6 sm:p-8 
+          flex flex-col 
+          justify-between
+          min-h-[450px] sm:min-h-[520px]
+          transition-all duration-300
+        "
+      >
         <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">
           Warenkorb
         </h2>
@@ -63,7 +88,16 @@ export default function Cart({ onNavigate }) {
         </div>
 
         {/* Cart items list */}
-        <div className="flex-1 space-y-4 overflow-visible sm:overflow-y-auto sm:max-h-[60vh]">
+        <div
+          className="
+            flex-1 
+            space-y-4 
+            overflow-y-auto 
+            max-h-[45vh] 
+            sm:max-h-[50vh] 
+            pr-1
+          "
+        >
           {grouped.length > 0 ? (
             grouped.map((item) => (
               <div

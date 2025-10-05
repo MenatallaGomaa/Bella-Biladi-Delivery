@@ -63,11 +63,12 @@ function MainApp() {
   // ✅ Page rendering logic
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Always show navbar */}
       <NavBar activePage={page} onNavigate={setPage} />
 
-      <main className="flex-1 bg-amber-200">
+      <main className="flex-1">
         {page === "Home" && (
-          <>
+          <div className="bg-amber-200">
             <Hero />
             <div className="max-w-5xl mx-auto px-3 py-6">
               <h2 className="text-3xl font-bold mb-4">BellaBiladi</h2>
@@ -109,7 +110,7 @@ function MainApp() {
                   />
                 ))}
             </div>
-          </>
+          </div>
         )}
 
         {page === "Cart" && <Cart onNavigate={setPage} />}
@@ -118,32 +119,31 @@ function MainApp() {
         {page === "Register" && <Register onNavigate={setPage} />}
       </main>
 
-      {/* ✅ Footer */}
-      <footer
-        className={`py-6 text-xs text-slate-700 ${
-          page === "Cart" ||
-          page === "Checkout" ||
-          page === "Login" ||
-          page === "Register"
-            ? "bg-white border-t"
-            : "bg-amber-200"
-        }`}
-      >
-        <div className="max-w-5xl mx-auto px-3">
-          <div className="flex gap-3 mb-3">
-            <a href="#">X</a>
-            <a href="#">IG</a>
-            <a href="#">FB</a>
+      {/* ✅ Hide footer on auth pages */}
+      {page !== "Login" && page !== "Register" && (
+        <footer
+          className={`py-6 text-xs text-slate-700 ${
+            page === "Cart" || page === "Checkout"
+              ? "bg-white border-t"
+              : "bg-amber-200"
+          }`}
+        >
+          <div className="max-w-5xl mx-auto px-3">
+            <div className="flex gap-3 mb-3">
+              <a href="#">X</a>
+              <a href="#">IG</a>
+              <a href="#">FB</a>
+            </div>
+            <div>
+              <div className="font-medium">Impressum</div>
+              <div>Bella Biladi</div>
+              <div>Edlichstraße 2</div>
+              <div>04315 Leipzig</div>
+              <div>Vertretungsberechtigt: Khalil Mountahi</div>
+            </div>
           </div>
-          <div>
-            <div className="font-medium">Impressum</div>
-            <div>Bella Biladi</div>
-            <div>Edlichstraße 2</div>
-            <div>04315 Leipzig</div>
-            <div>Vertretungsberechtigt: Khalil Mountahi</div>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

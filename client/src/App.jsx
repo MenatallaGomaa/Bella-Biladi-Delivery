@@ -6,6 +6,7 @@ import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
 import { CartProvider, useCart } from "./pages/CartContext";
 import { AuthProvider } from "./pages/AuthContext";
+import CheckoutPayment from "./pages/CheckoutPayment";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import "./index.css";
@@ -145,6 +146,7 @@ function MainApp() {
         {page === "CheckoutRegister" && (
           <Checkout onNavigate={setPage} initialMode="register" />
         )}
+        {page === "CheckoutPayment" && <CheckoutPayment onNavigate={setPage} />}
       </main>
 
       {/* ✅ Hide footer on Cart and Checkout pages */}

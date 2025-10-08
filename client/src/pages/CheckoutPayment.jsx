@@ -4,17 +4,21 @@ import { useCart } from "./CartContext";
 
 export default function CheckoutPayment({ onNavigate }) {
   const { user } = useAuth();
-  const { cart } = useCart();
+  const { cart, addToCart, removeOneFromCart, removeAllFromCart, clearCart } =
+    useCart();
 
-  // Group items and calculate totals
-  const grouped = Object.values(
-    cart.reduce((acc, item) => {
-      if (!acc[item.name]) acc[item.name] = { ...item, qty: 0 };
-      acc[item.name].qty++;
-      return acc;
-    }, {})
-  );
+  // Group items by name
+  const groupedMap = new Map();
+  cart.forEach((item) => {
+    if (!groupedMap.has(item.name)) {
+      groupedMap.set(item.name, { ...item, qty: 1 });
+    } else {
+      groupedMap.get(item.name).qty++;
+    }
+  });
+  const grouped = Array.from(groupedMap.values());
 
+  // Calculate totals
   const subtotal = grouped.reduce(
     (sum, item) => sum + (item.priceCents * item.qty) / 100,
     0
@@ -29,7 +33,7 @@ export default function CheckoutPayment({ onNavigate }) {
     name: user?.name || "",
     phone: "017600000000",
     address: "Ostheimstr. 8B, 04328 Leipzig",
-    time: "So schnell wie möglich",
+    time: { type: "asap", label: "So schnell wie möglich" },
     comment: "",
   });
 
@@ -84,7 +88,7 @@ export default function CheckoutPayment({ onNavigate }) {
             >
               <div>
                 <div className="font-medium">Lieferzeit</div>
-                <div className="text-gray-500">{form.time}</div>
+                <div className="text-gray-500">{form.time.label}</div>
               </div>
               <span className="text-gray-400">›</span>
             </button>
@@ -134,7 +138,11 @@ export default function CheckoutPayment({ onNavigate }) {
           </div>
 
           <button
-            onClick={() => alert("✅ Bestellung abgeschickt!")}
+            onClick={() => {
+              alert("✅ Bestellung abgeschickt!");
+              clearCart();
+              onNavigate("Home");
+            }}
             className="mt-6 w-full bg-amber-400 py-3 rounded-lg font-semibold hover:bg-amber-500"
           >
             Bestellen & Bezahlen
@@ -157,7 +165,7 @@ export default function CheckoutPayment({ onNavigate }) {
         </div>
       </div>
 
-      {/* ✅ ITEM MODAL */}
+      {/* ✅ ITEM MODAL with quantity controls */}
       {showItems && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 relative">
@@ -169,11 +177,12 @@ export default function CheckoutPayment({ onNavigate }) {
             </button>
 
             <h3 className="text-lg font-semibold mb-4">Deine Artikel</h3>
-            <div className="max-h-[50vh] overflow-y-auto space-y-3">
+
+            <div className="max-h-[60vh] overflow-y-auto space-y-3">
               {grouped.map((item) => (
                 <div
                   key={item.name}
-                  className="flex justify-between items-center border-b pb-2"
+                  className="flex justify-between items-center border-b pb-3"
                 >
                   <div>
                     <div className="font-medium">{item.name}</div>
@@ -181,17 +190,49 @@ export default function CheckoutPayment({ onNavigate }) {
                       {item.qty} × {(item.priceCents / 100).toFixed(2)} €
                     </div>
                   </div>
-                  <div className="font-semibold">
-                    {((item.priceCents * item.qty) / 100).toFixed(2)} €
+
+                  <div className="flex items-center gap-2">
+                    {/* ➖ Decrease one */}
+                    <button
+                      onClick={() => removeOneFromCart(item.name)}
+                      className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 text-center font-bold"
+                    >
+                      −
+                    </button>
+
+                    <span className="w-6 text-center">{item.qty}</span>
+
+                    {/* ➕ Increase one */}
+                    <button
+                      onClick={() => addToCart(item)}
+                      className="w-7 h-7 rounded-full bg-amber-400 hover:bg-amber-500 text-center font-bold"
+                    >
+                      +
+                    </button>
+
+                    {/* 🗑 Remove all */}
+                    <button
+                      onClick={() => removeAllFromCart(item.name)}
+                      className="ml-2 text-red-500 hover:text-red-700 text-lg"
+                    >
+                      🗑
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
+
+            <button
+              onClick={() => setShowItems(false)}
+              className="w-full mt-4 py-2 bg-amber-400 rounded-lg font-medium hover:bg-amber-500"
+            >
+              Fertig
+            </button>
           </div>
         </div>
       )}
 
-      {/* ✅ EDIT MODALS (same as before) */}
+      {/* ✅ EDIT MODALS */}
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-sm p-6 relative">
@@ -202,6 +243,7 @@ export default function CheckoutPayment({ onNavigate }) {
               ✕
             </button>
 
+            {/* 🧍 USER INFO */}
             {editing === "user" && (
               <>
                 <h3 className="text-lg font-semibold mb-4">Deine Angaben</h3>
@@ -228,6 +270,7 @@ export default function CheckoutPayment({ onNavigate }) {
               </>
             )}
 
+            {/* 🏠 ADDRESS */}
             {editing === "address" && (
               <>
                 <h3 className="text-lg font-semibold mb-4">
@@ -270,40 +313,117 @@ export default function CheckoutPayment({ onNavigate }) {
               </>
             )}
 
+            {/* ⏰ LIEFERZEIT */}
             {editing === "time" && (
               <>
                 <h3 className="text-lg font-semibold mb-4">Lieferzeit</h3>
+
+                {/* Option 1: So schnell wie möglich */}
                 <label className="flex items-center gap-2 mb-3">
                   <input
                     type="radio"
                     name="time"
-                    checked={form.time === "So schnell wie möglich"}
+                    checked={form.time.type === "asap"}
                     onChange={() =>
-                      setForm({ ...form, time: "So schnell wie möglich" })
+                      setForm({
+                        ...form,
+                        time: { type: "asap", label: "So schnell wie möglich" },
+                      })
                     }
                   />
                   <span>So schnell wie möglich</span>
                 </label>
+
+                {/* Option 2: Für später planen */}
                 <label className="flex items-center gap-2 mb-3">
                   <input
                     type="radio"
                     name="time"
-                    checked={form.time === "Für später planen"}
+                    checked={form.time.type === "later"}
                     onChange={() =>
-                      setForm({ ...form, time: "Für später planen" })
+                      setForm({
+                        ...form,
+                        time: {
+                          type: "later",
+                          day: "Heute",
+                          hour: "12:00",
+                          label: "Heute, 12:00 Uhr",
+                        },
+                      })
                     }
                   />
                   <span>Für später planen</span>
                 </label>
+
+                {/* Day + Time Selectors */}
+                {form.time.type === "later" && (
+                  <div className="mt-3 space-y-4">
+                    {/* Select Day */}
+                    <select
+                      className="w-full border border-amber-300 rounded-lg px-3 py-2 focus:ring-amber-400 focus:border-amber-400 outline-none"
+                      value={form.time.day}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          time: { ...prev.time, day: e.target.value },
+                        }))
+                      }
+                    >
+                      <option value="Heute">Heute</option>
+                      <option value="Morgen">Morgen</option>
+                    </select>
+
+                    {/* Select Time */}
+                    <select
+                      className="w-full border border-amber-300 rounded-lg px-3 py-2 focus:ring-amber-400 focus:border-amber-400 outline-none"
+                      value={form.time.hour}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          time: { ...prev.time, hour: e.target.value },
+                        }))
+                      }
+                    >
+                      {Array.from({ length: 44 }, (_, i) => {
+                        const hour = 12 + Math.floor(i / 4);
+                        const minute = (i % 4) * 15;
+                        if (hour > 23) return null;
+                        const formatted = `${hour
+                          .toString()
+                          .padStart(2, "0")}:${minute
+                          .toString()
+                          .padStart(2, "0")}`;
+                        return (
+                          <option key={formatted} value={formatted}>
+                            {formatted}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                )}
+
+                {/* Save Button */}
                 <button
-                  onClick={handleSave}
-                  className="w-full bg-amber-400 py-2 rounded-lg font-medium hover:bg-amber-500"
+                  onClick={() => {
+                    const label =
+                      form.time.type === "asap"
+                        ? "So schnell wie möglich"
+                        : `${form.time.day}, ${form.time.hour} Uhr`;
+                    setForm((prev) => ({
+                      ...prev,
+                      time: { ...prev.time, label },
+                    }));
+                    handleSave();
+                  }}
+                  className="w-full bg-amber-400 py-2 rounded-lg font-medium hover:bg-amber-500 mt-6"
                 >
                   Speichern
                 </button>
               </>
             )}
 
+            {/* 💬 COMMENT */}
             {editing === "comment" && (
               <>
                 <h3 className="text-lg font-semibold mb-4">Sonderwünsche</h3>

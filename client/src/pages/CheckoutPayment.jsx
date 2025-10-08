@@ -1,10 +1,30 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
+import { useCart } from "./CartContext";
 
 export default function CheckoutPayment({ onNavigate }) {
   const { user } = useAuth();
+  const { cart } = useCart();
+
+  // Group items and calculate totals
+  const grouped = Object.values(
+    cart.reduce((acc, item) => {
+      if (!acc[item.name]) acc[item.name] = { ...item, qty: 0 };
+      acc[item.name].qty++;
+      return acc;
+    }, {})
+  );
+
+  const subtotal = grouped.reduce(
+    (sum, item) => sum + (item.priceCents * item.qty) / 100,
+    0
+  );
+  const delivery = 0.0;
+  const total = subtotal + delivery;
 
   const [editing, setEditing] = useState(null);
+  const [showItems, setShowItems] = useState(false);
+
   const [form, setForm] = useState({
     name: user?.name || "",
     phone: "017600000000",
@@ -13,10 +33,9 @@ export default function CheckoutPayment({ onNavigate }) {
     comment: "",
   });
 
-  // Prevent body scroll when editing
   useEffect(() => {
-    document.body.style.overflow = editing ? "hidden" : "auto";
-  }, [editing]);
+    document.body.style.overflow = editing || showItems ? "hidden" : "auto";
+  }, [editing, showItems]);
 
   const handleSave = () => setEditing(null);
 
@@ -35,7 +54,6 @@ export default function CheckoutPayment({ onNavigate }) {
         <div className="bg-white rounded-2xl shadow-md p-6 w-full">
           <h2 className="text-xl font-bold mb-4">Bestelldetails</h2>
           <div className="divide-y text-sm">
-            {/* Name & Phone */}
             <button
               className="w-full text-left py-3 flex justify-between items-center"
               onClick={() => setEditing("user")}
@@ -47,7 +65,6 @@ export default function CheckoutPayment({ onNavigate }) {
               <span className="text-gray-400">›</span>
             </button>
 
-            {/* Address */}
             <button
               className="w-full text-left py-3 flex justify-between items-center"
               onClick={() => setEditing("address")}
@@ -61,7 +78,6 @@ export default function CheckoutPayment({ onNavigate }) {
               <span className="text-gray-400">›</span>
             </button>
 
-            {/* Time */}
             <button
               className="w-full text-left py-3 flex justify-between items-center"
               onClick={() => setEditing("time")}
@@ -73,7 +89,6 @@ export default function CheckoutPayment({ onNavigate }) {
               <span className="text-gray-400">›</span>
             </button>
 
-            {/* Comment */}
             <button
               className="w-full text-left py-3 flex justify-between items-center"
               onClick={() => setEditing("comment")}
@@ -94,23 +109,27 @@ export default function CheckoutPayment({ onNavigate }) {
           <h2 className="text-xl font-bold mb-4">Bestellübersicht</h2>
           <div className="text-sm text-gray-700 space-y-2">
             <div className="flex justify-between border-b pb-2">
-              <span className="text-blue-600 underline cursor-pointer">
-                4 Artikel anzeigen
-              </span>
+              <button
+                className="text-blue-600 underline cursor-pointer"
+                onClick={() => setShowItems(true)}
+              >
+                {cart.length} Artikel anzeigen
+              </button>
               <span>🍕</span>
             </div>
+
             <div className="flex justify-between mt-4">
               <span>Zwischensumme</span>
-              <span>40,36 €</span>
+              <span>{subtotal.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between">
               <span>Lieferkosten</span>
-              <span>0,00 €</span>
+              <span>{delivery.toFixed(2)} €</span>
             </div>
             <hr className="my-2" />
             <div className="flex justify-between font-semibold text-lg">
               <span>Gesamt</span>
-              <span>40,36 €</span>
+              <span>{total.toFixed(2)} €</span>
             </div>
           </div>
 
@@ -138,7 +157,41 @@ export default function CheckoutPayment({ onNavigate }) {
         </div>
       </div>
 
-      {/* ✅ MODALS */}
+      {/* ✅ ITEM MODAL */}
+      {showItems && (
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 relative">
+            <button
+              onClick={() => setShowItems(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-black"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-lg font-semibold mb-4">Deine Artikel</h3>
+            <div className="max-h-[50vh] overflow-y-auto space-y-3">
+              {grouped.map((item) => (
+                <div
+                  key={item.name}
+                  className="flex justify-between items-center border-b pb-2"
+                >
+                  <div>
+                    <div className="font-medium">{item.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {item.qty} × {(item.priceCents / 100).toFixed(2)} €
+                    </div>
+                  </div>
+                  <div className="font-semibold">
+                    {((item.priceCents * item.qty) / 100).toFixed(2)} €
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ EDIT MODALS (same as before) */}
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-sm p-6 relative">

@@ -31,8 +31,8 @@ export default function CheckoutPayment({ onNavigate }) {
 
   const [form, setForm] = useState({
     name: user?.name || "",
-    phone: "017600000000",
-    address: "Ostheimstr. 8B, 04328 Leipzig",
+    phone: "000000000000",
+    address: "Straße und Hausnummer , Postleitzahl Leipzig",
     time: { type: "asap", label: "So schnell wie möglich" },
     comment: "",
   });

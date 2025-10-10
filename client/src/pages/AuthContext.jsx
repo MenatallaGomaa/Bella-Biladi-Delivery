@@ -5,14 +5,33 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
+  // ✅ Load registered users from localStorage
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem("users");
     return saved ? JSON.parse(saved) : {};
   });
 
+  // ✅ Keep users saved in localStorage
   useEffect(() => {
     localStorage.setItem("users", JSON.stringify(users));
   }, [users]);
+
+  // ✅ Load logged-in user on first app load
+  useEffect(() => {
+    const storedUser = localStorage.getItem("loggedInUser");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  // ✅ Keep the logged-in user saved in localStorage
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("loggedInUser", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("loggedInUser");
+    }
+  }, [user]);
 
   const register = async (name, email, password) => {
     console.log("Register triggered:", name, email);
@@ -25,6 +44,7 @@ export function AuthProvider({ children }) {
     const updatedUsers = { ...users, [email]: newUser };
     setUsers(updatedUsers);
     setUser(newUser);
+    localStorage.setItem("loggedInUser", JSON.stringify(newUser)); // ✅ auto-login after register
   };
 
   const login = async (email, password) => {
@@ -40,10 +60,12 @@ export function AuthProvider({ children }) {
     }
 
     setUser(existingUser);
+    localStorage.setItem("loggedInUser", JSON.stringify(existingUser)); // ✅ persist login
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem("loggedInUser"); // ✅ clear only on logout
   };
 
   return (

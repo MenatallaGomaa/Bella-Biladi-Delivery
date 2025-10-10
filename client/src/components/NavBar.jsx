@@ -1,14 +1,29 @@
+import { useState, useRef, useEffect } from "react";
 import { useCart } from "../pages/CartContext";
-import { useAuth } from "../pages/AuthContext"; // ✅ Import user context
+import { useAuth } from "../pages/AuthContext";
 
 export default function NavBar({ activePage, onNavigate }) {
   const { cart } = useCart();
-  const { user, logout } = useAuth(); // ✅ Access user info & logout
+  const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const dropdownRef = useRef();
+
   const links = ["Home", "Cart", "Checkout", "Contact", "Catering"];
 
+  // ✅ Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <nav className="h-12 flex items-center justify-between bg-white border-b border-gray-400 px-4">
-      {/* ✅ Left side — logo + links */}
+    <nav className="h-12 flex items-center justify-between bg-white border-b border-gray-400 px-4 relative">
+      {/* Left side — logo + links */}
       <div className="flex items-center gap-3">
         <img
           src="/logo.jpeg"
@@ -16,7 +31,6 @@ export default function NavBar({ activePage, onNavigate }) {
           className="h-8 w-8 cursor-pointer"
           onClick={() => onNavigate("Home")}
         />
-
         {links.map((link) => (
           <button
             key={link}
@@ -37,36 +51,50 @@ export default function NavBar({ activePage, onNavigate }) {
         ))}
       </div>
 
-      {/* ✅ Right side — user or auth buttons */}
-      <div className="flex items-center gap-2">
+      {/* Right side — user menu or auth buttons */}
+      <div className="flex items-center gap-2 relative" ref={dropdownRef}>
         {user ? (
-          // ✅ Show user icon when logged in
-          <div className="relative group">
+          <>
+            {/* 👤 User Icon */}
             <img
               src="/user.png"
               alt="User"
-              className="h-8 w-8 rounded-full border cursor-pointer hover:ring-2 hover:ring-amber-400 transition"
-              onClick={() => onNavigate("Orders")} // Go to order history page
+              className="h-6 w-6 cursor-pointer hover:opacity-80"
+              onClick={() => setMenuOpen((prev) => !prev)}
             />
 
-            {/* Optional dropdown (logout, etc.) */}
-            <div className="hidden group-hover:block absolute right-0 mt-2 bg-white border rounded-lg shadow-md text-sm w-32">
-              <button
-                onClick={() => onNavigate("Orders")}
-                className="block w-full text-left px-4 py-2 hover:bg-amber-100"
-              >
-                Meine Bestellungen
-              </button>
-              <button
-                onClick={logout}
-                className="block w-full text-left px-4 py-2 text-red-600 hover:bg-amber-100"
-              >
-                Abmelden
-              </button>
-            </div>
-          </div>
+            {/* ✅ Dropdown Menu */}
+            {menuOpen && (
+              <div className="absolute right-0 top-10 bg-white border border-gray-300 rounded-lg shadow-md w-44 z-50">
+                <button
+                  onClick={() => {
+                    onNavigate("Orders");
+                    setMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium text-gray-700"
+                >
+                  Meine Bestellungen
+                </button>
+
+                <button
+                  onClick={() => {
+                    logout();
+                    setMenuOpen(false);
+                    onNavigate("Home");
+                  }}
+                  className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-4 py-2 w-full text-left font-medium text-sm"
+                >
+                  <img
+                    src="/logout.png"
+                    alt="Logout"
+                    className="h-4 w-4 opacity-80"
+                  />
+                  Abmelden
+                </button>
+              </div>
+            )}
+          </>
         ) : (
-          // ✅ Show login/register if not signed in
           <>
             <button
               onClick={() => onNavigate("CheckoutLogin")}

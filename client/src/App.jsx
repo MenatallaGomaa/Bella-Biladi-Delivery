@@ -9,6 +9,7 @@ import { AuthProvider } from "./pages/AuthContext";
 import CheckoutPayment from "./pages/CheckoutPayment";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import Orders from "./pages/Orders"; // ✅ Added Orders page
 import "./index.css";
 
 function MainApp() {
@@ -147,6 +148,9 @@ function MainApp() {
           <Checkout onNavigate={setPage} initialMode="register" />
         )}
         {page === "CheckoutPayment" && <CheckoutPayment onNavigate={setPage} />}
+
+        {/* ✅ Orders Page */}
+        {page === "Orders" && <Orders onNavigate={setPage} />}
       </main>
 
       {/* ✅ Hide footer on Cart and Checkout pages */}

@@ -139,7 +139,26 @@ export default function CheckoutPayment({ onNavigate }) {
 
           <button
             onClick={() => {
-              alert("✅ Bestellung abgeschickt!");
+              const savedOrders = JSON.parse(
+                localStorage.getItem("orders") || "[]"
+              );
+              const newOrder = {
+                date: new Date().toLocaleString("de-DE"),
+                items: grouped.map((i) => ({
+                  name: i.name,
+                  qty: i.qty,
+                  price: (i.priceCents / 100) * i.qty,
+                })),
+                total,
+                time:
+                  typeof form.time === "object" ? form.time.label : form.time,
+              };
+
+              localStorage.setItem(
+                "orders",
+                JSON.stringify([...savedOrders, newOrder])
+              );
+              alert("✅ Bestellung erfolgreich gespeichert!");
               clearCart();
               onNavigate("Home");
             }}

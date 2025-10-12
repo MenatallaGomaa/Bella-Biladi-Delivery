@@ -3,10 +3,16 @@ import { useEffect, useState } from "react";
 export default function Orders({ onNavigate }) {
   const [orders, setOrders] = useState([]);
 
-  // Load orders from localStorage
+  // ✅ Load and sort orders (newest first)
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("orders") || "[]");
-    setOrders(saved);
+
+    // Sort newest → oldest by date
+    const sorted = saved.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    setOrders(sorted);
   }, []);
 
   return (
@@ -27,7 +33,7 @@ export default function Orders({ onNavigate }) {
               >
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold text-lg">
-                    Bestellung #{idx + 1}
+                    Bestellung #{orders.length - idx}
                   </h3>
                   <span className="text-sm text-gray-500">{order.date}</span>
                 </div>

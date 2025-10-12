@@ -1,49 +1,181 @@
 import { Router } from "express";
 import { customAlphabet } from "nanoid";
-import Order from "../Order.js";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+import Order from "../models/Order.js";
 import Item from "../models/Item.js";
+
+dotenv.config();
+
 const r = Router();
 const nano = customAlphabet("0123456789", 6);
 
-// create order (cash only)
+/* 
+  ✅ Email Transporter Setup
+  Uses Gmail in production (.env must have EMAIL_USER + EMAIL_PASS)
+  Uses Ethereal automatically when running on localhost
+*/
+let transporter;
+
+async function initTransporter() {
+  if (process.env.NODE_ENV === "production") {
+    // --- Gmail setup (for production) ---
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    try {
+      await transporter.verify();
+      console.log("✅ Gmail transporter ready");
+    } catch (err) {
+      console.error("❌ Gmail transporter failed:", err.message);
+    }
+  } else {
+    // --- Ethereal setup (for local development) ---
+    const testAccount = await nodemailer.createTestAccount();
+    transporter = nodemailer.createTransport({
+      host: "smtp.ethereal.email",
+      port: 587,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+    console.log("📨 Using Ethereal test email account");
+    console.log(`👉 View emails at: https://ethereal.email/login`);
+  }
+}
+await initTransporter();
+
+// ✅ Create order (cash only) and send email confirmation
 r.post("/", async (req, res) => {
-  const { items, customer, notes } = req.body;
-  if (!items?.length) return res.status(400).json({ error: "No items" });
+  try {
+    const { items, customer, notes } = req.body;
 
-  // compute totals from DB prices
-  const ids = items.map((i) => i.itemId);
-  const dbItems = await Item.find({ _id: { $in: ids } });
-  const cart = items.map((i) => {
-    const it = dbItems.find((d) => String(d._id) === i.itemId);
-    return {
-      itemId: i.itemId,
-      name: it.name,
-      priceCents: it.priceCents,
-      qty: i.qty,
-    };
-  });
-  const subtotal = cart.reduce((s, i) => s + i.priceCents * i.qty, 0);
-  const deliveryFee = 0;
-  const total = subtotal + deliveryFee;
+    if (!items?.length) {
+      return res.status(400).json({ error: "No items provided" });
+    }
 
-  const ref = `BB-${new Date().getFullYear()}-${nano()}`;
+    // Get item data from DB
+    const ids = items.map((i) => i.itemId);
+    const dbItems = await Item.find({ _id: { $in: ids } });
 
-  const order = await Order.create({
-    ref,
-    items: cart,
-    totals: {
-      subtotalCents: subtotal,
-      deliveryFeeCents: deliveryFee,
-      grandTotalCents: total,
-    },
-    customer: { ...customer, notes },
-    method: "cash_on_delivery",
-  });
+    const cart = items.map((i) => {
+      const it = dbItems.find((d) => String(d._id) === i.itemId);
+      return {
+        itemId: i.itemId,
+        name: it?.name,
+        priceCents: it?.priceCents,
+        qty: i.qty,
+      };
+    });
 
-  res.status(201).json({ ok: true, ref: order.ref, id: order._id });
+    const subtotal = cart.reduce((s, i) => s + i.priceCents * i.qty, 0);
+    const total = subtotal; // Add delivery fee if needed later
+    const ref = `BB-${new Date().getFullYear()}-${nano()}`;
+
+    // Save order to DB
+    const order = await Order.create({
+      ref,
+      items: cart,
+      totals: {
+        subtotalCents: subtotal,
+        grandTotalCents: total,
+      },
+      customer: { ...customer, notes },
+      method: "cash_on_delivery",
+    });
+
+    // ✅ Send confirmation email
+    if (customer?.email && transporter) {
+      const html = `
+        <div style="font-family:Arial,sans-serif;color:#333">
+          <h2>Hallo ${customer.name || "Kunde"} 👋</h2>
+          <p>Vielen Dank für Ihre Bestellung bei <b>BellaBiladi</b>!</p>
+          <p><b>Bestellnummer:</b> ${ref}</p>
+          <h3>Ihre Bestellung:</h3>
+          <ul>
+            ${cart
+              .map(
+                (i) =>
+                  `<li>${i.qty}× ${i.name} – €${(
+                    (i.priceCents * i.qty) /
+                    100
+                  ).toFixed(2)}</li>`
+              )
+              .join("")}
+          </ul>
+          <p><b>Gesamtbetrag:</b> €${(total / 100).toFixed(2)}</p>
+          <p><b>Lieferzeit:</b> So schnell wie möglich</p>
+          <p>Wir bereiten Ihre Bestellung gerade vor und liefern bald!</p>
+          <br/>
+          <p>Mit freundlichen Grüßen,<br><b>BellaBiladi-Team 🍕</b></p>
+        </div>
+      `;
+
+      const mailOptions = {
+        from: `"BellaBiladi 🍕" <${
+          process.env.EMAIL_USER || "no-reply@bellabiladi.de"
+        }>`,
+        to: customer.email,
+        subject: "🍕 Ihre BellaBiladi Bestellbestätigung",
+        html,
+      };
+
+      try {
+        const info = await transporter.sendMail(mailOptions);
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "📨 Preview email at:",
+            nodemailer.getTestMessageUrl(info)
+          );
+        } else {
+          console.log(`✅ Email sent to ${customer.email}`);
+        }
+      } catch (err) {
+        console.error("❌ Email send failed:", err.message);
+      }
+    }
+
+    res.status(201).json({ ok: true, ref: order.ref, id: order._id });
+  } catch (err) {
+    console.error("❌ Error creating order:", err);
+    res.status(500).json({ error: "Order creation failed" });
+  }
 });
 
-// admin list by status
+// ✅ Test email endpoint (works in both Gmail & Ethereal modes)
+r.get("/test-email", async (req, res) => {
+  try {
+    const to = req.query.to;
+    if (!to) return res.status(400).json({ error: "Missing ?to=email" });
+
+    const info = await transporter.sendMail({
+      from: `"BellaBiladi 🍕" <${
+        process.env.EMAIL_USER || "no-reply@bellabiladi.de"
+      }>`,
+      to,
+      subject: "BellaBiladi Test Email ✅",
+      html: `<p>This is a test email from <b>BellaBiladi</b>.</p>`,
+    });
+
+    const preview = nodemailer.getTestMessageUrl(info);
+    res.json({
+      success: true,
+      message: "Test email sent",
+      preview: preview || null,
+    });
+  } catch (err) {
+    console.error("❌ Error sending test email:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ✅ Admin: List orders
 r.get("/", async (req, res) => {
   const { status } = req.query;
   const q = status ? { status } : {};
@@ -51,7 +183,7 @@ r.get("/", async (req, res) => {
   res.json(orders);
 });
 
-// update status
+// ✅ Admin: Update order status
 r.patch("/:id", async (req, res) => {
   const { status } = req.body;
   const order = await Order.findByIdAndUpdate(

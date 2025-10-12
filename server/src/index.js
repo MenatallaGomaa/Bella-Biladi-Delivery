@@ -1,41 +1,13 @@
-/*import express from "express";
-import mongoose from "mongoose";
-import cors from "cors";
-import itemsRoutes from "./routes/items.js"; // ✅ only one "routes"
-
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.static("public")); // ✅ serve images from /public
-
-// Routes
-app.use("/api/items", itemsRoutes);
-
-// Test route
-app.get("/", (req, res) => {
-  res.json({ ok: true, name: "bb-server" });
-});
-
-// DB connection
-mongoose
-  .connect(process.env.MONGO_URL || "mongodb://localhost:27017/bb")
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((err) => console.error("❌ DB error:", err));
-
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, "0.0.0.0", () =>
-  console.log(`🚀 API running on http://localhost:${PORT}`)
-);
-*/
-
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
-import itemsRoutes from "./routes/items.js";
+import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import itemsRoutes from "./routes/items.js";
+import ordersRoutes from "./routes/orders.js"; // ✅ include orders route
+
+dotenv.config();
 
 const app = express();
 
@@ -44,26 +16,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(express.json());
-
-// Serve static images
 app.use("/public", express.static(path.join(__dirname, "../public")));
 
-// Routes
+// ✅ Routes
 app.use("/api/items", itemsRoutes);
+app.use("/api/orders", ordersRoutes);
 
-// Test route
-app.get("/", (req, res) => {
-  res.json({ ok: true, name: "bb-server" });
-});
+// ✅ Test route
+app.get("/", (req, res) => res.json({ ok: true, name: "BellaBiladi API" }));
 
-// DB connection
+// ✅ Connect to MongoDB (ensure it's the same database you used before)
 mongoose
-  .connect(process.env.MONGO_URL || "mongodb://localhost:27017/bb")
+  .connect(process.env.MONGO_URL)
   .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((err) => console.error("❌ DB error:", err));
+  .catch((err) => console.error("❌ DB connection error:", err));
 
+// ✅ Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, "0.0.0.0", () =>
   console.log(`🚀 API running on http://localhost:${PORT}`)

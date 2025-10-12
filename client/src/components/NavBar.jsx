@@ -8,9 +8,9 @@ export default function NavBar({ activePage, onNavigate }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const dropdownRef = useRef();
 
-  const links = ["Home", "Cart", "Checkout", "Contact", "Catering"];
+  const links = ["Home", "Warenkorb", "Kasse", "Kontakt", "Catering"];
 
-  // ✅ Close dropdown when clicking outside
+  // ✅ Dropdown schließen, wenn außerhalb geklickt wird
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -21,9 +21,42 @@ export default function NavBar({ activePage, onNavigate }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ✅ Navigation mit Login-Überprüfung + Scroll-Reset
+  const handleLinkClick = (link) => {
+    // 👇 Wenn der Nutzer auf denselben Tab klickt → nach oben scrollen
+    if (
+      (link === "Home" && activePage === "Home") ||
+      (link === "Warenkorb" && activePage === "Cart") ||
+      (link === "Kasse" && activePage === "CheckoutPayment") ||
+      (link === "Kontakt" && activePage === "Contact") ||
+      (link === "Catering" && activePage === "Catering")
+    ) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    // 👇 Logik für Kasse: Nur wenn eingeloggt, sonst Weiterleitung zu Login
+    if (link === "Kasse") {
+      if (user) {
+        onNavigate("CheckoutPayment");
+      } else {
+        localStorage.setItem("redirectAfterLogin", "CheckoutPayment");
+        onNavigate("CheckoutLogin");
+      }
+    } else if (link === "Warenkorb") {
+      onNavigate("Cart");
+    } else if (link === "Home") {
+      onNavigate("Home");
+    } else if (link === "Kontakt") {
+      onNavigate("Contact");
+    } else if (link === "Catering") {
+      onNavigate("Catering");
+    }
+  };
+
   return (
     <nav className="h-12 flex items-center justify-between bg-white border-b border-gray-400 px-4 relative">
-      {/* Left side — logo + links */}
+      {/* Linke Seite — Logo + Navigationslinks */}
       <div className="flex items-center gap-3">
         <img
           src="/logo.jpeg"
@@ -31,18 +64,22 @@ export default function NavBar({ activePage, onNavigate }) {
           className="h-8 w-8 cursor-pointer"
           onClick={() => onNavigate("Home")}
         />
+
         {links.map((link) => (
           <button
             key={link}
-            onClick={() => onNavigate(link)}
+            onClick={() => handleLinkClick(link)}
             className={`relative text-sm px-2 py-1 rounded transition-colors ${
-              activePage === link
+              activePage === link ||
+              (link === "Warenkorb" && activePage === "Cart") ||
+              (link === "Kasse" && activePage === "CheckoutPayment")
                 ? "bg-amber-400 text-black font-semibold"
                 : "hover:bg-amber-200 hover:text-black"
             }`}
           >
             {link}
-            {link === "Cart" && cart.length > 0 && (
+            {/* 🛒 Badge für Warenkorb */}
+            {link === "Warenkorb" && cart.length > 0 && (
               <span className="absolute -top-2 -right-3 bg-amber-500 text-white text-xs rounded-full px-2">
                 {cart.length}
               </span>
@@ -51,19 +88,19 @@ export default function NavBar({ activePage, onNavigate }) {
         ))}
       </div>
 
-      {/* Right side — user menu or auth buttons */}
+      {/* Rechte Seite — Benutzer-Menü oder Login/Register */}
       <div className="flex items-center gap-2 relative" ref={dropdownRef}>
         {user ? (
           <>
-            {/* 👤 User Icon */}
+            {/* 👤 Benutzer-Icon */}
             <img
               src="/user.png"
-              alt="User"
+              alt="Benutzer"
               className="h-6 w-6 cursor-pointer hover:opacity-80"
               onClick={() => setMenuOpen((prev) => !prev)}
             />
 
-            {/* ✅ Dropdown Menu */}
+            {/* ✅ Dropdown-Menü */}
             {menuOpen && (
               <div className="absolute right-0 top-10 bg-white border border-gray-300 rounded-lg shadow-md w-44 z-50">
                 <button
@@ -86,7 +123,7 @@ export default function NavBar({ activePage, onNavigate }) {
                 >
                   <img
                     src="/logout.png"
-                    alt="Logout"
+                    alt="Abmelden"
                     className="h-4 w-4 opacity-80"
                   />
                   Abmelden
@@ -100,13 +137,13 @@ export default function NavBar({ activePage, onNavigate }) {
               onClick={() => onNavigate("CheckoutLogin")}
               className="text-xs border rounded px-2 py-1 hover:bg-slate-100"
             >
-              Sign in
+              Anmelden
             </button>
             <button
               onClick={() => onNavigate("CheckoutRegister")}
               className="text-xs bg-slate-900 text-white rounded px-2 py-1 hover:bg-slate-700"
             >
-              Register
+              Registrieren
             </button>
           </>
         )}

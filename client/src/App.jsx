@@ -5,11 +5,11 @@ import Hero from "./components/Hero";
 import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
 import { CartProvider, useCart } from "./pages/CartContext";
-import { AuthProvider } from "./pages/AuthContext";
+import { AuthProvider, useAuth } from "./pages/AuthContext";
 import CheckoutPayment from "./pages/CheckoutPayment";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
-import Orders from "./pages/Orders"; // ✅ Added Orders page
+import Orders from "./pages/Orders";
 import "./index.css";
 
 function MainApp() {
@@ -19,15 +19,14 @@ function MainApp() {
     localStorage.getItem("currentPage") || "Home"
   );
   const { addToCart } = useCart();
+  const { user, loading } = useAuth(); // 👈 include loading
   const sectionRefs = useRef({});
 
-  // ✅ Save current page to localStorage
   useEffect(() => {
     localStorage.setItem("currentPage", page);
     window.history.pushState({}, "", `/${page.toLowerCase()}`);
   }, [page]);
 
-  // ✅ Fetch menu items
   useEffect(() => {
     api
       .get("/api/items")
@@ -35,14 +34,12 @@ function MainApp() {
       .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
   }, []);
 
-  // ✅ Category list
   const categories = useMemo(() => {
     const defaults = ["Beliebt", "Pizza", "Pizzabrötchen"];
     const dynamic = items.map((i) => i.category || "Pizza");
     return [...new Set([...defaults, ...dynamic])];
   }, [items]);
 
-  // ✅ Group items by category
   const grouped = useMemo(() => {
     const m = new Map();
     items.forEach((i) => {
@@ -53,14 +50,12 @@ function MainApp() {
     return m;
   }, [items]);
 
-  // ✅ Smooth scroll to section when category is selected
   useEffect(() => {
     if (sectionRefs.current[active]) {
       sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
     }
   }, [active]);
 
-  // ✅ Control Navbar and Footer visibility
   const hideNav =
     page === "Checkout" ||
     page === "CheckoutLogin" ||
@@ -72,10 +67,37 @@ function MainApp() {
     page === "CheckoutRegister" ||
     page === "Cart";
 
+  const handleNavigate = (newPage) => {
+    if (
+      (newPage === "CheckoutPayment" ||
+        newPage === "Checkout" ||
+        newPage === "CheckoutRegister" ||
+        newPage === "CheckoutLogin") &&
+      !user
+    ) {
+      // 💾 Remember the destination so we can return after login
+      localStorage.setItem("redirectAfterLogin", newPage);
+      setPage("CheckoutLogin");
+      return;
+    }
+
+    setPage(newPage);
+  };
+
+  // ⏳ Wait for auth state to load
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-amber-200">
+        <div className="text-lg font-semibold text-gray-700">
+          Benutzerstatus wird geladen...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
-      {/* ✅ Navbar visible on Cart */}
-      {!hideNav && <NavBar activePage={page} onNavigate={setPage} />}
+      {!hideNav && <NavBar activePage={page} onNavigate={handleNavigate} />}
 
       <main
         className={`flex-1 ${
@@ -84,13 +106,11 @@ function MainApp() {
             : ""
         }`}
       >
-        {/* ✅ Home Page */}
         {page === "Home" && (
           <div className="bg-amber-200">
             <Hero />
             <div className="max-w-5xl mx-auto px-3 py-6">
               <h2 className="text-3xl font-bold mb-4">BellaBiladi</h2>
-
               <CategoryPills
                 tabs={categories}
                 active={active}
@@ -132,28 +152,27 @@ function MainApp() {
           </div>
         )}
 
-        {/* ✅ Cart Page (with visible navbar, hidden footer) */}
         {page === "Cart" && (
           <div className="flex justify-center items-center w-full min-h-screen bg-amber-200">
-            <Cart onNavigate={setPage} />
+            <Cart onNavigate={handleNavigate} />
           </div>
         )}
 
-        {/* ✅ Checkout Pages */}
-        {page === "Checkout" && <Checkout onNavigate={setPage} />}
+        {page === "Checkout" && user && (
+          <Checkout onNavigate={handleNavigate} />
+        )}
         {page === "CheckoutLogin" && (
-          <Checkout onNavigate={setPage} initialMode="login" />
+          <Checkout onNavigate={handleNavigate} initialMode="login" />
         )}
         {page === "CheckoutRegister" && (
-          <Checkout onNavigate={setPage} initialMode="register" />
+          <Checkout onNavigate={handleNavigate} initialMode="register" />
         )}
-        {page === "CheckoutPayment" && <CheckoutPayment onNavigate={setPage} />}
-
-        {/* ✅ Orders Page */}
-        {page === "Orders" && <Orders onNavigate={setPage} />}
+        {page === "CheckoutPayment" && user && (
+          <CheckoutPayment onNavigate={handleNavigate} />
+        )}
+        {page === "Orders" && <Orders onNavigate={handleNavigate} />}
       </main>
 
-      {/* ✅ Hide footer on Cart and Checkout pages */}
       {!hideFooter && (
         <footer className="py-6 text-xs text-slate-700 bg-white border-t">
           <div className="max-w-5xl mx-auto px-3">

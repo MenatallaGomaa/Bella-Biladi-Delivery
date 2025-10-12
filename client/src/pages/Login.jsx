@@ -6,7 +6,7 @@ export default function Login({ onNavigate }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
-  // 🧠 Automatically clear error after 5 seconds
+  // 🧠 Auto-clear error after 5 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(""), 5000);
@@ -14,16 +14,33 @@ export default function Login({ onNavigate }) {
     }
   }, [error]);
 
+  // ✅ Auto-redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      const redirectPage = localStorage.getItem("redirectAfterLogin") || "Home";
+      localStorage.removeItem("redirectAfterLogin");
+      onNavigate(
+        redirectPage === "Checkout" ? "CheckoutPayment" : redirectPage
+      );
+    }
+  }, [user]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // clear any old errors
+    setError("");
 
     try {
       await login(form.email, form.password);
-      onNavigate("Checkout");
+
+      // ✅ Redirect after successful login
+      const redirectPage = localStorage.getItem("redirectAfterLogin") || "Home";
+      localStorage.removeItem("redirectAfterLogin");
+      onNavigate(
+        redirectPage === "Checkout" ? "CheckoutPayment" : redirectPage
+      );
     } catch (err) {
       console.error("❌ Login error:", err.message);
-      setError(err.message); // 👈 show error on screen
+      setError(err.message);
     }
   };
 

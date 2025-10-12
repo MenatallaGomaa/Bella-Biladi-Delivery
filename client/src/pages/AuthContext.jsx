@@ -1,78 +1,57 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // 👈 new flag
 
-  // ✅ Load registered users from localStorage
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem("users");
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  // ✅ Keep users saved in localStorage
+  // ✅ Load user from localStorage on mount
   useEffect(() => {
-    localStorage.setItem("users", JSON.stringify(users));
-  }, [users]);
-
-  // ✅ Load logged-in user on first app load
-  useEffect(() => {
-    const storedUser = localStorage.getItem("loggedInUser");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const saved = localStorage.getItem("user");
+    if (saved) {
+      try {
+        setUser(JSON.parse(saved));
+      } catch {
+        localStorage.removeItem("user");
+      }
     }
+    setLoading(false);
   }, []);
 
-  // ✅ Keep the logged-in user saved in localStorage
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem("loggedInUser", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("loggedInUser");
-    }
-  }, [user]);
-
   const register = async (name, email, password) => {
-    console.log("Register triggered:", name, email);
-
-    if (users[email]) {
-      throw new Error("Ein Benutzer mit dieser E-Mail existiert bereits.");
-    }
-
-    const newUser = { name, email, password, token: "FAKEJWT456" };
-    const updatedUsers = { ...users, [email]: newUser };
-    setUsers(updatedUsers);
+    const newUser = { name, email, password };
     setUser(newUser);
-    localStorage.setItem("loggedInUser", JSON.stringify(newUser)); // ✅ auto-login after register
+    localStorage.setItem("user", JSON.stringify(newUser));
+    return newUser;
   };
 
   const login = async (email, password) => {
-    console.log("Login triggered:", email);
-
-    const existingUser = users[email];
-    if (!existingUser) {
-      throw new Error("Benutzer nicht gefunden. Bitte registrieren Sie sich.");
+    const savedUser = JSON.parse(localStorage.getItem("user"));
+    if (
+      savedUser &&
+      savedUser.email === email &&
+      savedUser.password === password
+    ) {
+      setUser(savedUser);
+      return savedUser;
+    } else {
+      throw new Error("Ungültige Anmeldedaten");
     }
-
-    if (existingUser.password !== password) {
-      throw new Error("Falsches Passwort. Bitte versuchen Sie es erneut.");
-    }
-
-    setUser(existingUser);
-    localStorage.setItem("loggedInUser", JSON.stringify(existingUser)); // ✅ persist login
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("loggedInUser"); // ✅ clear only on logout
+    localStorage.removeItem("user");
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext);
+}

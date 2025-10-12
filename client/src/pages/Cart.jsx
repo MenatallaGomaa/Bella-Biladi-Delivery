@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useCart } from "./CartContext";
+import { useAuth } from "./AuthContext"; // ✅ import auth context
 
 export default function Cart({ onNavigate }) {
   const { cart, addToCart, setCart } = useCart();
+  const { user } = useAuth(); // ✅ get user
   const [deliveryMode, setDeliveryMode] = useState("Lieferung");
 
   const total = cart.reduce((sum, item) => sum + item.priceCents, 0) / 100;
@@ -32,6 +34,18 @@ export default function Cart({ onNavigate }) {
     document.body.style.overflow = "hidden";
     return () => (document.body.style.overflow = "auto");
   }, []);
+
+  // ✅ Handle checkout button click
+  const handleCheckout = () => {
+    if (user) {
+      // already logged in → go directly to payment
+      onNavigate("CheckoutPayment");
+    } else {
+      // not logged in → remember destination and go to login
+      localStorage.setItem("redirectAfterLogin", "CheckoutPayment");
+      onNavigate("CheckoutLogin");
+    }
+  };
 
   return (
     <div
@@ -152,7 +166,7 @@ export default function Cart({ onNavigate }) {
               Zur Kasse {total.toFixed(2)} €
             </div>
             <button
-              onClick={() => onNavigate("Checkout")}
+              onClick={handleCheckout} // ✅ uses logic above
               className="bg-amber-400 px-6 py-2 rounded-lg font-semibold hover:bg-amber-500"
             >
               Zur Kasse

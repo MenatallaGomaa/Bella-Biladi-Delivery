@@ -6,17 +6,7 @@ export default function Register({ onNavigate }) {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError("");
-    register(form.name, form.email, form.password)
-      .then(() => onNavigate("Checkout"))
-      .catch((err) => {
-        console.error("Register error:", err.message);
-        setError(err.message);
-      });
-  };
-
+  // 🧠 Auto-clear error after 5 seconds
   useEffect(() => {
     if (error) {
       const t = setTimeout(() => setError(""), 5000);
@@ -24,11 +14,42 @@ export default function Register({ onNavigate }) {
     }
   }, [error]);
 
+  // ✅ Auto-redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      const redirectPage = localStorage.getItem("redirectAfterLogin") || "Home";
+      localStorage.removeItem("redirectAfterLogin");
+      onNavigate(
+        redirectPage === "Checkout" ? "CheckoutPayment" : redirectPage
+      );
+    }
+  }, [user]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      await register(form.name, form.email, form.password);
+
+      // ✅ Redirect after successful registration
+      const redirectPage = localStorage.getItem("redirectAfterLogin") || "Home";
+      localStorage.removeItem("redirectAfterLogin");
+      onNavigate(
+        redirectPage === "Checkout" ? "CheckoutPayment" : redirectPage
+      );
+    } catch (err) {
+      console.error("Register error:", err.message);
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="flex justify-center items-center h-[100vh] bg-amber-200 overflow-hidden">
       <div className="bg-white w-[90%] max-w-[420px] p-8 rounded-2xl shadow-xl">
         <h2 className="text-2xl font-bold text-center mb-6">Registrieren</h2>
 
+        {/* 🔴 Error message visible to user */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm mb-4 text-center">
             {error}
@@ -59,7 +80,7 @@ export default function Register({ onNavigate }) {
           />
           <button
             type="submit"
-            className="w-full bg-amber-400 py-2 rounded-lg hover:bg-amber-500 font-semibold"
+            className="w-full bg-amber-400 py-2 rounded-lg hover:bg-amber-500 font-semibold transition-colors"
           >
             Registrieren
           </button>

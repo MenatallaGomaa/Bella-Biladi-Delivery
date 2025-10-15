@@ -95,9 +95,9 @@ export default function NavBar({ activePage, onNavigate }) {
               onClick={() => setMenuOpen((prev) => !prev)}
             />
 
-            {/* ✅ Dropdown menu */}
+            {/* ✅ Dropdown-Menü */}
             {menuOpen && (
-              <div className="absolute right-0 top-10 bg-white border border-gray-300 rounded-lg shadow-md w-44 z-50">
+              <div className="absolute right-0 top-10 bg-white border border-gray-300 rounded-xl shadow-lg w-44 z-50 overflow-hidden">
                 <button
                   onClick={() => {
                     onNavigate("Orders");

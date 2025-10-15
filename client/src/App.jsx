@@ -19,14 +19,16 @@ function MainApp() {
     localStorage.getItem("currentPage") || "Home"
   );
   const { addToCart } = useCart();
-  const { user, loading } = useAuth(); // 👈 include loading
+  const { user, loading } = useAuth();
   const sectionRefs = useRef({});
 
+  // 🧭 Sync URL + localStorage
   useEffect(() => {
     localStorage.setItem("currentPage", page);
     window.history.pushState({}, "", `/${page.toLowerCase()}`);
   }, [page]);
 
+  // 🍕 Fetch menu items
   useEffect(() => {
     api
       .get("/api/items")
@@ -34,6 +36,7 @@ function MainApp() {
       .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
   }, []);
 
+  // 🗂️ Build categories
   const categories = useMemo(() => {
     const defaults = ["Beliebt", "Pizza", "Pizzabrötchen"];
     const dynamic = items.map((i) => i.category || "Pizza");
@@ -50,12 +53,14 @@ function MainApp() {
     return m;
   }, [items]);
 
+  // 📜 Smooth scroll when switching tabs
   useEffect(() => {
     if (sectionRefs.current[active]) {
       sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
     }
   }, [active]);
 
+  // 🎨 UI visibility logic
   const hideNav =
     page === "Checkout" ||
     page === "CheckoutLogin" ||
@@ -67,24 +72,40 @@ function MainApp() {
     page === "CheckoutRegister" ||
     page === "Cart";
 
+  // 🧭 Universal navigation handler
   const handleNavigate = (newPage) => {
-    if (
-      (newPage === "CheckoutPayment" ||
-        newPage === "Checkout" ||
-        newPage === "CheckoutRegister" ||
-        newPage === "CheckoutLogin") &&
-      !user
-    ) {
-      // 💾 Remember the destination so we can return after login
+    // 🔐 Require login for certain routes
+    const protectedPages = [
+      "CheckoutPayment",
+      "Checkout",
+      "CheckoutRegister",
+      "CheckoutLogin",
+    ];
+
+    if (protectedPages.includes(newPage) && !user) {
       localStorage.setItem("redirectAfterLogin", newPage);
       setPage("CheckoutLogin");
       return;
     }
 
+    // ✅ update page normally
     setPage(newPage);
   };
 
-  // ⏳ Wait for auth state to load
+  // 🧭 Redirect after login/register automatically
+  useEffect(() => {
+    const redirectAfterLogin = localStorage.getItem("redirectAfterLogin");
+
+    // if user just logged in and a redirect target exists
+    if (user && redirectAfterLogin) {
+      setTimeout(() => {
+        setPage(redirectAfterLogin);
+        localStorage.removeItem("redirectAfterLogin");
+      }, 500); // small delay to ensure AuthContext is ready
+    }
+  }, [user]);
+
+  // ⏳ Loading auth
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-amber-200">
@@ -97,6 +118,7 @@ function MainApp() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* 🧭 Navigation */}
       {!hideNav && <NavBar activePage={page} onNavigate={handleNavigate} />}
 
       <main
@@ -106,17 +128,20 @@ function MainApp() {
             : ""
         }`}
       >
+        {/* 🏠 HOME */}
         {page === "Home" && (
           <div className="bg-amber-200">
             <Hero />
             <div className="max-w-5xl mx-auto px-3 py-6">
               <h2 className="text-3xl font-bold mb-4">BellaBiladi</h2>
+
               <CategoryPills
                 tabs={categories}
                 active={active}
                 onPick={setActive}
               />
 
+              {/* Featured */}
               {grouped.get("Beliebt") && (
                 <Section
                   key="Beliebt"
@@ -127,6 +152,7 @@ function MainApp() {
                 />
               )}
 
+              {/* Pizza */}
               {grouped.get("Pizza") && (
                 <Section
                   key="Pizza"
@@ -137,6 +163,7 @@ function MainApp() {
                 />
               )}
 
+              {/* Other categories */}
               {[...grouped.entries()]
                 .filter(([cat]) => cat !== "Beliebt" && cat !== "Pizza")
                 .map(([cat, list]) => (
@@ -152,12 +179,14 @@ function MainApp() {
           </div>
         )}
 
+        {/* 🛒 CART */}
         {page === "Cart" && (
           <div className="flex justify-center items-center w-full min-h-screen bg-amber-200">
             <Cart onNavigate={handleNavigate} />
           </div>
         )}
 
+        {/* 🧾 CHECKOUT */}
         {page === "Checkout" && user && (
           <Checkout onNavigate={handleNavigate} />
         )}
@@ -167,12 +196,17 @@ function MainApp() {
         {page === "CheckoutRegister" && (
           <Checkout onNavigate={handleNavigate} initialMode="register" />
         )}
+
+        {/* 💳 PAYMENT */}
         {page === "CheckoutPayment" && user && (
           <CheckoutPayment onNavigate={handleNavigate} />
         )}
+
+        {/* 📦 ORDERS */}
         {page === "Orders" && <Orders onNavigate={handleNavigate} />}
       </main>
 
+      {/* 🦶 FOOTER */}
       {!hideFooter && (
         <footer className="py-6 text-xs text-slate-700 bg-white border-t">
           <div className="max-w-5xl mx-auto px-3">

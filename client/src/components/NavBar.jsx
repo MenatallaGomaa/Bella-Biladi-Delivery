@@ -139,12 +139,6 @@ export default function NavBar({ activePage, onNavigate }) {
             >
               Anmelden
             </button>
-            <button
-              onClick={() => onNavigate("CheckoutRegister")}
-              className="text-xs bg-slate-900 text-white rounded px-2 py-1 hover:bg-slate-700"
-            >
-              Registrieren
-            </button>
           </>
         )}
       </div>

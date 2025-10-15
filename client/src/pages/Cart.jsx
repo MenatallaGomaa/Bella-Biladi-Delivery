@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useCart } from "./CartContext";
-import { useAuth } from "./AuthContext"; // ✅ import auth context
+import { useAuth } from "./AuthContext";
 
 export default function Cart({ onNavigate }) {
   const { cart, addToCart, setCart } = useCart();
@@ -29,13 +29,13 @@ export default function Cart({ onNavigate }) {
     }, {})
   );
 
-  // ✅ Prevent page scroll (keep fixed height)
+  // Prevent page scroll (keep fixed height)
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => (document.body.style.overflow = "auto");
   }, []);
 
-  // ✅ Handle checkout button click
+  // Handle checkout button click
   const handleCheckout = () => {
     if (user) {
       // already logged in → go directly to payment
@@ -79,24 +79,33 @@ export default function Cart({ onNavigate }) {
         <div className="flex justify-center gap-2 mb-6">
           <button
             onClick={() => setDeliveryMode("Lieferung")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg ${
               deliveryMode === "Lieferung"
                 ? "bg-amber-300 text-black font-semibold"
                 : "bg-gray-200 text-gray-600"
             }`}
           >
-            <img src="/delivery.png" alt="Lieferung" className="w-5 h-5" />
+            <img
+              src="/delivery.png"
+              alt="Lieferung"
+              className="w-5 h-5 ml-1 sm:ml-2" // 👈 added margin-left
+            />
             Lieferung <span className="text-sm">15–35 min</span>
           </button>
+
           <button
             onClick={() => setDeliveryMode("Abholung")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg ${
               deliveryMode === "Abholung"
                 ? "bg-amber-300 text-black font-semibold"
                 : "bg-gray-200 text-gray-600"
             }`}
           >
-            <img src="/delivery-man.png" alt="Abholung" className="w-5 h-5" />
+            <img
+              src="/delivery-man.png"
+              alt="Abholung"
+              className="w-5 h-5 ml-1 sm:ml-2" // 👈 same spacing for consistency
+            />
             Abholung <span className="text-sm">15 min</span>
           </button>
         </div>
@@ -166,7 +175,7 @@ export default function Cart({ onNavigate }) {
               Zur Kasse {total.toFixed(2)} €
             </div>
             <button
-              onClick={handleCheckout} // ✅ uses logic above
+              onClick={handleCheckout} // uses logic above
               className="bg-amber-400 px-6 py-2 rounded-lg font-semibold hover:bg-amber-500"
             >
               Zur Kasse

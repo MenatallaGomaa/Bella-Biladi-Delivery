@@ -38,7 +38,17 @@ function MainApp() {
 
   // 🗂️ Build categories
   const categories = useMemo(() => {
-    const defaults = ["Beliebt", "Pizza", "Pizzabrötchen"];
+    const defaults = [
+      "Beliebt",
+      "Pizza",
+      "Pizzabrötchen",
+      "Spaghetti",
+      "Pasta Überbacken",
+      "Burger",
+      "Pommes Frites",
+      "Getränke",
+      "Desserts",
+    ];
     const dynamic = items.map((i) => i.category || "Pizza");
     return [...new Set([...defaults, ...dynamic])];
   }, [items]);

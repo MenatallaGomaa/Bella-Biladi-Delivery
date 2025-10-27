@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import Order from "../models/Order.js";
 import Item from "../models/Item.js";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -79,8 +80,23 @@ r.post("/", async (req, res) => {
     const ref = `BB-${new Date().getFullYear()}-${nano()}`;
 
     // Save order to DB
+    // optional user association via Bearer token
+    let userId;
+    try {
+      const auth = req.headers.authorization || "";
+      const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+      if (token) {
+        const payload = jwt.verify(
+          token,
+          process.env.JWT_SECRET || "dev_secret_change_me"
+        );
+        userId = payload.sub;
+      }
+    } catch {}
+
     const order = await Order.create({
       ref,
+      userId,
       items: cart,
       totals: {
         subtotalCents: subtotal,
@@ -175,7 +191,7 @@ r.get("/test-email", async (req, res) => {
   }
 });
 
-// ✅ Admin: List orders
+// ✅ Admin: List orders (optionally filter by status)
 r.get("/", async (req, res) => {
   const { status } = req.query;
   const q = status ? { status } : {};
@@ -192,6 +208,25 @@ r.patch("/:id", async (req, res) => {
     { new: true }
   );
   res.json(order);
+});
+
+// ✅ User: My orders
+r.get("/mine", async (req, res) => {
+  try {
+    const auth = req.headers.authorization || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+    if (!token) return res.status(401).json({ error: "Missing token" });
+    const payload = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "dev_secret_change_me"
+    );
+    const orders = await Order.find({ userId: payload.sub })
+      .sort({ createdAt: -1 })
+      .limit(100);
+    res.json(orders);
+  } catch (err) {
+    res.status(401).json({ error: "Invalid token" });
+  }
 });
 
 export default r;

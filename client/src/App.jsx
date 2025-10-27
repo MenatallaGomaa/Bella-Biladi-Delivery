@@ -10,14 +10,31 @@ import CheckoutPayment from "./pages/CheckoutPayment";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
+import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 import "./index.css";
 
 function MainApp() {
   const [items, setItems] = useState([]);
   const [active, setActive] = useState("Beliebt");
-  const [page, setPage] = useState(
-    localStorage.getItem("currentPage") || "Home"
-  );
+  const [page, setPage] = useState(() => {
+    const saved = localStorage.getItem("currentPage");
+    if (saved) return saved;
+    const path = window.location.pathname.replace(/^\//, "");
+    const map = {
+      "": "Home",
+      home: "Home",
+      warenkorb: "Cart",
+      kasse: "Checkout",
+      checkout: "Checkout",
+      login: "CheckoutLogin",
+      register: "CheckoutRegister",
+      orders: "Orders",
+      profile: "Profile",
+      admin: "Admin",
+    };
+    return map[path] || "Home";
+  });
   const { addToCart } = useCart();
   const { user, loading } = useAuth();
   const sectionRefs = useRef({});
@@ -25,7 +42,19 @@ function MainApp() {
   // 🧭 Sync URL + localStorage
   useEffect(() => {
     localStorage.setItem("currentPage", page);
-    window.history.pushState({}, "", `/${page.toLowerCase()}`);
+    const map = {
+      Home: "/home",
+      Cart: "/warenkorb",
+      Checkout: "/kasse",
+      CheckoutLogin: "/login",
+      CheckoutRegister: "/register",
+      CheckoutPayment: "/checkout",
+      Orders: "/orders",
+      Profile: "/profile",
+      Admin: "/admin",
+    };
+    const path = map[page] || "/home";
+    window.history.pushState({}, "", path);
   }, [page]);
 
   // 🍕 Fetch menu items
@@ -90,6 +119,8 @@ function MainApp() {
       "Checkout",
       "CheckoutRegister",
       "CheckoutLogin",
+      "Orders",
+      "Profile",
     ];
 
     if (protectedPages.includes(newPage) && !user) {
@@ -214,6 +245,12 @@ function MainApp() {
 
         {/* 📦 ORDERS */}
         {page === "Orders" && <Orders onNavigate={handleNavigate} />}
+
+        {/* 👤 PROFILE */}
+        {page === "Profile" && user && <Profile onNavigate={handleNavigate} />}
+
+        {/* 🛠️ ADMIN */}
+        {page === "Admin" && <Admin onNavigate={handleNavigate} />}
       </main>
 
       {/* 🦶 FOOTER */}

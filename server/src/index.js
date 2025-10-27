@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import itemsRoutes from "./routes/items.js";
 import ordersRoutes from "./routes/orders.js"; // ✅ include orders route
 import authRoutes from "./routes/auth.js";
+import uploadRoutes from "./routes/upload.js";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use("/public", express.static(path.join(__dirname, "../public")));
 app.use("/api/items", itemsRoutes);
 app.use("/api/orders", ordersRoutes);
 app.use("/api", authRoutes);
+app.use("/api", uploadRoutes);
 
 // ✅ Test route
 app.get("/", (req, res) => res.json({ ok: true, name: "BellaBiladi API" }));

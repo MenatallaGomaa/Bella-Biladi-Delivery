@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import Order from "../models/Order.js";
 import Item from "../models/Item.js";
 import jwt from "jsonwebtoken";
+import { requireAdmin } from "../middleware/auth.js";
 
 dotenv.config();
 
@@ -192,7 +193,7 @@ r.get("/test-email", async (req, res) => {
 });
 
 // ✅ Admin: List orders (optionally filter by status)
-r.get("/", async (req, res) => {
+r.get("/", requireAdmin, async (req, res) => {
   const { status } = req.query;
   const q = status ? { status } : {};
   const orders = await Order.find(q).sort({ createdAt: -1 }).limit(100);
@@ -200,7 +201,7 @@ r.get("/", async (req, res) => {
 });
 
 // ✅ Admin: Update order status
-r.patch("/:id", async (req, res) => {
+r.patch("/:id", requireAdmin, async (req, res) => {
   const { status } = req.body;
   const order = await Order.findByIdAndUpdate(
     req.params.id,

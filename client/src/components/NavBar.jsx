@@ -48,6 +48,18 @@ export default function NavBar({ activePage, onNavigate }) {
       onNavigate("Home");
     }
   };
+  
+  // Allow direct navigation on URL load
+  useEffect(() => {
+    const path = window.location.pathname.replace(/^\//, "");
+    if (path === "profile") {
+      if (user) onNavigate("Profile"); else onNavigate("CheckoutLogin");
+    } else if (path === "orders") {
+      if (user) onNavigate("Orders"); else onNavigate("CheckoutLogin");
+    } else if (path === "admin" && user?.role === "admin") {
+      onNavigate("Admin");
+    }
+  }, [user]);
 
   return (
     <nav className="h-12 flex items-center justify-between bg-white border-b border-gray-400 px-4 relative">
@@ -100,6 +112,15 @@ export default function NavBar({ activePage, onNavigate }) {
               <div className="absolute right-0 top-10 bg-white border border-gray-300 rounded-xl shadow-lg w-44 z-50 overflow-hidden">
                 <button
                   onClick={() => {
+                    onNavigate("Profile");
+                    setMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium text-gray-700"
+                >
+                  Profil
+                </button>
+                <button
+                  onClick={() => {
                     onNavigate("Orders");
                     setMenuOpen(false);
                   }}
@@ -107,6 +128,18 @@ export default function NavBar({ activePage, onNavigate }) {
                 >
                   Meine Bestellungen
                 </button>
+
+                {user?.role === "admin" && (
+                  <button
+                    onClick={() => {
+                      onNavigate("Admin");
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium text-gray-700"
+                  >
+                    Admin
+                  </button>
+                )}
 
                 <button
                   onClick={() => {

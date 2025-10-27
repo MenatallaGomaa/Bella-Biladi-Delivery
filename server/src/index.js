@@ -24,7 +24,10 @@ app.use("/public", express.static(path.join(__dirname, "../public")));
 // ✅ Routes
 app.use("/api/items", itemsRoutes);
 app.use("/api/orders", ordersRoutes);
-app.use("/api", authRoutes);
+
+console.log("✅ Registering /api/auth routes");
+
+app.use("/api/auth", authRoutes);
 
 // ✅ Test route
 app.get("/", (req, res) => res.json({ ok: true, name: "BellaBiladi API" }));

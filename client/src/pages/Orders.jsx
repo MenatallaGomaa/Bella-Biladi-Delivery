@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
+import { euro } from "../api";
 
 export default function Orders({ onNavigate }) {
   const [orders, setOrders] = useState([]);
 
-  // ✅ Load and sort orders (newest first)
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("orders") || "[]");
-
-    // Sort newest → oldest by date
-    const sorted = saved.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-
-    setOrders(sorted);
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${import.meta.env.VITE_API_BASE || "http://localhost:4000"}/api/orders/mine`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => setOrders(Array.isArray(data) ? data : []))
+      .catch(() => setOrders([]));
   }, []);
 
   return (
@@ -28,14 +28,16 @@ export default function Orders({ onNavigate }) {
           <div className="space-y-4">
             {orders.map((order, idx) => (
               <div
-                key={idx}
+                key={order._id || idx}
                 className="border border-gray-200 rounded-xl p-4 shadow-sm bg-gray-50"
               >
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold text-lg">
-                    Bestellung #{orders.length - idx}
+                    {order.ref || `Bestellung #${orders.length - idx}`}
                   </h3>
-                  <span className="text-sm text-gray-500">{order.date}</span>
+                  <span className="text-sm text-gray-500">
+                    {new Date(order.createdAt || Date.now()).toLocaleString("de-DE")}
+                  </span>
                 </div>
 
                 <div className="text-sm text-gray-700 space-y-1">
@@ -44,7 +46,7 @@ export default function Orders({ onNavigate }) {
                       <span>
                         {item.qty}× {item.name}
                       </span>
-                      <span>{item.price.toFixed(2)} €</span>
+                      <span>{euro(item.priceCents * item.qty)}</span>
                     </div>
                   ))}
                 </div>
@@ -52,11 +54,11 @@ export default function Orders({ onNavigate }) {
                 <hr className="my-2" />
                 <div className="flex justify-between font-semibold">
                   <span>Gesamt</span>
-                  <span>{order.total.toFixed(2)} €</span>
+                  <span>{euro(order?.totals?.grandTotalCents || 0)}</span>
                 </div>
 
                 <div className="text-sm text-gray-500 mt-1">
-                  Lieferzeit: {order.time}
+                  Status: {order.status}
                 </div>
               </div>
             ))}

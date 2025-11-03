@@ -109,6 +109,11 @@ r.post("/", async (req, res) => {
 
     // ✅ Send confirmation email
     if (customer?.email && transporter) {
+      const desiredTime = customer?.desiredTime || "So schnell wie möglich";
+      const commentBlock = customer?.notes
+        ? `<p><b>Hinweis:</b> ${customer.notes}</p>`
+        : "";
+
       const html = `
         <div style="font-family:Arial,sans-serif;color:#333">
           <h2>Hallo ${customer.name || "Kunde"} 👋</h2>
@@ -127,7 +132,8 @@ r.post("/", async (req, res) => {
               .join("")}
           </ul>
           <p><b>Gesamtbetrag:</b> €${(total / 100).toFixed(2)}</p>
-          <p><b>Lieferzeit:</b> So schnell wie möglich</p>
+          <p><b>Lieferzeit:</b> ${desiredTime}</p>
+          ${commentBlock}
           <p>Wir bereiten Ihre Bestellung gerade vor und liefern bald!</p>
           <br/>
           <p>Mit freundlichen Grüßen,<br><b>BellaBiladi-Team 🍕</b></p>

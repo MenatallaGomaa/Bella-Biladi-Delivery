@@ -33,6 +33,8 @@ const OrderSchema = new mongoose.Schema(
       name: String,
       phone: String,
       address: String,
+      email: String,
+      desiredTime: String,
       notes: String,
     },
     method: { type: String, default: "cash_on_delivery" },

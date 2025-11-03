@@ -7,7 +7,7 @@ const Section = forwardRef(({ title, items, onAddToCart }, ref) => {
       <h2 className="text-xl font-bold mb-3">{title}</h2>
 
       {title === "Beliebt" ? (
-        <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+        <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2">
           {items.map((item) => (
             <ProductCard
               key={item._id}
@@ -18,7 +18,7 @@ const Section = forwardRef(({ title, items, onAddToCart }, ref) => {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
             <ProductCard key={item._id} item={item} onAddToCart={onAddToCart} />
           ))}

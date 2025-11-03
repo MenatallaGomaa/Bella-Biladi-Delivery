@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function Profile({ onNavigate }) {
   const [profile, setProfile] = useState(null);
@@ -6,6 +6,8 @@ export default function Profile({ onNavigate }) {
   const [error, setError] = useState("");
   const [addresses, setAddresses] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState("");
+  const successTimeoutRef = useRef(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -31,7 +33,16 @@ export default function Profile({ onNavigate }) {
     load();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleAddAddress = () => {
+    setSuccess("");
     setAddresses((prev) => [
       ...prev,
       { label: "Zuhause", name: "", phone: "", street: "", postalCity: "" },
@@ -39,12 +50,14 @@ export default function Profile({ onNavigate }) {
   };
 
   const handleRemoveAddress = (idx) => {
+    setSuccess("");
     setAddresses((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSave = async () => {
     setSaving(true);
     setError("");
+    setSuccess("");
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE || "http://localhost:4000"}/api/profile/addresses`, {
@@ -56,6 +69,14 @@ export default function Profile({ onNavigate }) {
         body: JSON.stringify({ addresses }),
       });
       if (!res.ok) throw new Error("Speichern fehlgeschlagen");
+      const data = await res.json();
+      setProfile(data);
+      setAddresses(Array.isArray(data.addresses) ? data.addresses : []);
+      setSuccess("Adresse erfolgreich gespeichert!");
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+      successTimeoutRef.current = setTimeout(() => setSuccess(""), 3500);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -86,6 +107,11 @@ export default function Profile({ onNavigate }) {
         {error && (
           <div className="mb-4 bg-red-100 border border-red-300 text-red-700 text-sm px-3 py-2 rounded">
             {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 bg-green-100 border border-green-300 text-green-700 text-sm px-3 py-2 rounded">
+            {success}
           </div>
         )}
 
@@ -119,6 +145,7 @@ export default function Profile({ onNavigate }) {
                   value={addr.label || ""}
                   onChange={(e) => {
                     const v = e.target.value;
+                    setSuccess("");
                     setAddresses((prev) => prev.map((a, i) => (i === idx ? { ...a, label: v } : a)));
                   }}
                 />
@@ -128,6 +155,7 @@ export default function Profile({ onNavigate }) {
                   value={addr.name || ""}
                   onChange={(e) => {
                     const v = e.target.value;
+                    setSuccess("");
                     setAddresses((prev) => prev.map((a, i) => (i === idx ? { ...a, name: v } : a)));
                   }}
                 />
@@ -137,6 +165,7 @@ export default function Profile({ onNavigate }) {
                   value={addr.phone || ""}
                   onChange={(e) => {
                     const v = e.target.value;
+                    setSuccess("");
                     setAddresses((prev) => prev.map((a, i) => (i === idx ? { ...a, phone: v } : a)));
                   }}
                 />
@@ -146,6 +175,7 @@ export default function Profile({ onNavigate }) {
                   value={addr.street || ""}
                   onChange={(e) => {
                     const v = e.target.value;
+                    setSuccess("");
                     setAddresses((prev) => prev.map((a, i) => (i === idx ? { ...a, street: v } : a)));
                   }}
                 />
@@ -155,6 +185,7 @@ export default function Profile({ onNavigate }) {
                   value={addr.postalCity || ""}
                   onChange={(e) => {
                     const v = e.target.value;
+                    setSuccess("");
                     setAddresses((prev) => prev.map((a, i) => (i === idx ? { ...a, postalCity: v } : a)));
                   }}
                 />

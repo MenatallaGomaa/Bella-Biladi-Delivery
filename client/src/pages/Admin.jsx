@@ -109,7 +109,13 @@ export default function Admin({ onNavigate }) {
 
   const resetItemForm = () => {
     setEditingItemId(null);
-    setItemForm({ name: "", description: "", price: "", category: "", imageUrl: "" });
+    setItemForm({
+      name: "",
+      description: "",
+      price: "",
+      category: "",
+      imageUrl: "",
+    });
   };
 
   const handleEditItem = (item) => {
@@ -125,7 +131,9 @@ export default function Admin({ onNavigate }) {
 
   const handleDeleteItem = async (id) => {
     if (!token) return;
-    const confirmed = window.confirm("Möchtest du diesen Artikel wirklich löschen?");
+    const confirmed = window.confirm(
+      "Möchtest du diesen Artikel wirklich löschen?"
+    );
     if (!confirmed) return;
     try {
       setItemsError("");
@@ -145,7 +153,9 @@ export default function Admin({ onNavigate }) {
     event.preventDefault();
     setItemsError("");
 
-    const priceValue = Number.parseFloat(String(itemForm.price).replace(",", "."));
+    const priceValue = Number.parseFloat(
+      String(itemForm.price).replace(",", ".")
+    );
     if (Number.isNaN(priceValue) || priceValue <= 0) {
       setItemsError("Bitte gib einen gültigen Preis ein.");
       return;
@@ -262,9 +272,13 @@ export default function Admin({ onNavigate }) {
             )}
 
             {ordersLoading ? (
-              <div className="text-sm text-gray-600">Bestellungen werden geladen…</div>
+              <div className="text-sm text-gray-600">
+                Bestellungen werden geladen…
+              </div>
             ) : orders.length === 0 ? (
-              <div className="text-gray-600 text-sm">Keine Bestellungen gefunden.</div>
+              <div className="text-gray-600 text-sm">
+                Keine Bestellungen gefunden.
+              </div>
             ) : (
               <div className="space-y-4">
                 {orders.map((order) => (
@@ -287,15 +301,23 @@ export default function Admin({ onNavigate }) {
                           <span>
                             {item.qty}× {item.name}
                           </span>
-                          <span>{((item.priceCents * item.qty) / 100).toFixed(2)} €</span>
+                          <span>
+                            {((item.priceCents * item.qty) / 100).toFixed(2)} €
+                          </span>
                         </div>
                       ))}
                     </div>
                     <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
                       <div>
-                        <div><strong>Kunde:</strong> {order.customer?.name}</div>
-                        <div><strong>Adresse:</strong> {order.customer?.address}</div>
-                        <div><strong>Telefon:</strong> {order.customer?.phone}</div>
+                        <div>
+                          <strong>Kunde:</strong> {order.customer?.name}
+                        </div>
+                        <div>
+                          <strong>Adresse:</strong> {order.customer?.address}
+                        </div>
+                        <div>
+                          <strong>Telefon:</strong> {order.customer?.phone}
+                        </div>
                         {order.customer?.email && (
                           <div>
                             <strong>E-Mail:</strong> {order.customer.email}
@@ -303,7 +325,8 @@ export default function Admin({ onNavigate }) {
                         )}
                         {order.customer?.desiredTime && (
                           <div>
-                            <strong>Lieferzeit:</strong> {order.customer.desiredTime}
+                            <strong>Lieferzeit:</strong>{" "}
+                            {order.customer.desiredTime}
                           </div>
                         )}
                         {order.customer?.notes && (
@@ -316,7 +339,9 @@ export default function Admin({ onNavigate }) {
                         <span className="text-sm font-medium">Status:</span>
                         <select
                           value={order.status}
-                          onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                          onChange={(e) =>
+                            updateOrderStatus(order._id, e.target.value)
+                          }
                           className="border rounded px-2 py-1 text-sm"
                         >
                           <option value="new">neu</option>
@@ -359,7 +384,9 @@ export default function Admin({ onNavigate }) {
                   <input
                     type="text"
                     value={itemForm.name}
-                    onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                    onChange={(e) =>
+                      setItemForm({ ...itemForm, name: e.target.value })
+                    }
                     className="w-full border rounded-lg px-3 py-2"
                     required
                   />
@@ -371,7 +398,9 @@ export default function Admin({ onNavigate }) {
                   <textarea
                     rows={3}
                     value={itemForm.description}
-                    onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                    onChange={(e) =>
+                      setItemForm({ ...itemForm, description: e.target.value })
+                    }
                     className="w-full border rounded-lg px-3 py-2"
                   />
                 </div>
@@ -385,7 +414,9 @@ export default function Admin({ onNavigate }) {
                       step="0.01"
                       min="0"
                       value={itemForm.price}
-                      onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
+                      onChange={(e) =>
+                        setItemForm({ ...itemForm, price: e.target.value })
+                      }
                       className="w-full border rounded-lg px-3 py-2"
                       required
                     />
@@ -397,7 +428,9 @@ export default function Admin({ onNavigate }) {
                     <input
                       type="text"
                       value={itemForm.category}
-                      onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
+                      onChange={(e) =>
+                        setItemForm({ ...itemForm, category: e.target.value })
+                      }
                       className="w-full border rounded-lg px-3 py-2"
                       required
                     />
@@ -405,15 +438,71 @@ export default function Admin({ onNavigate }) {
                 </div>
                 <div>
                   <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">
-                    Bild-URL
+                    Bild-URL oder Upload
                   </label>
-                  <input
-                    type="url"
-                    value={itemForm.imageUrl}
-                    onChange={(e) => setItemForm({ ...itemForm, imageUrl: e.target.value })}
-                    className="w-full border rounded-lg px-3 py-2"
-                    placeholder="https://..."
-                  />
+
+                  <div className="space-y-2">
+                    {/* 1️⃣ Optional text field for manual URLs */}
+                    <input
+                      type="text"
+                      value={itemForm.imageUrl}
+                      onChange={(e) =>
+                        setItemForm({ ...itemForm, imageUrl: e.target.value })
+                      }
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="https:// oder lade ein Bild unten hoch"
+                    />
+
+                    {/* 2️⃣ File upload input */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        const formData = new FormData();
+                        formData.append("file", file); // must match upload.single("file") in backend
+
+                        try {
+                          const res = await fetch(`${API_BASE}/api/upload`, {
+                            method: "POST",
+                            headers: {
+                              Authorization: `Bearer ${token}`, // required for requireAdmin
+                            },
+                            body: formData,
+                          });
+
+                          if (!res.ok) throw new Error("Upload failed");
+
+                          const data = await res.json();
+
+                          if (data.url) {
+                            setItemForm((f) => ({ ...f, imageUrl: data.url }));
+                          } else {
+                            alert("Upload succeeded but no URL returned.");
+                          }
+                        } catch (err) {
+                          console.error("Upload failed", err);
+                          alert(
+                            "Bild-Upload fehlgeschlagen. Bitte erneut versuchen."
+                          );
+                        }
+                      }}
+                      className="block w-full text-sm text-gray-700 border border-amber-200 rounded-lg cursor-pointer bg-amber-50 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-amber-300 file:text-gray-800 hover:file:bg-amber-400"
+                    />
+
+                    {/* 3️⃣ Image preview */}
+                    {itemForm.imageUrl && (
+                      <div className="mt-2">
+                        <img
+                          src={itemForm.imageUrl}
+                          alt="Vorschau"
+                          className="h-24 w-24 object-cover rounded-lg border"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-2">
                   <button
@@ -421,7 +510,11 @@ export default function Admin({ onNavigate }) {
                     disabled={itemSaving}
                     className="bg-amber-400 hover:bg-amber-500 px-4 py-2 rounded-lg font-semibold disabled:opacity-60"
                   >
-                    {itemSaving ? "Speichern…" : editingItemId ? "Artikel aktualisieren" : "Artikel erstellen"}
+                    {itemSaving
+                      ? "Speichern…"
+                      : editingItemId
+                      ? "Artikel aktualisieren"
+                      : "Artikel erstellen"}
                   </button>
                   {editingItemId && (
                     <button
@@ -447,9 +540,13 @@ export default function Admin({ onNavigate }) {
                 </button>
               </div>
               {itemsLoading ? (
-                <div className="text-sm text-gray-600">Artikel werden geladen…</div>
+                <div className="text-sm text-gray-600">
+                  Artikel werden geladen…
+                </div>
               ) : items.length === 0 ? (
-                <div className="text-sm text-gray-600">Noch keine Artikel vorhanden.</div>
+                <div className="text-sm text-gray-600">
+                  Noch keine Artikel vorhanden.
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {items.map((item) => (
@@ -470,8 +567,12 @@ export default function Admin({ onNavigate }) {
                           </div>
                         )}
                         <div className="flex-1">
-                          <div className="font-semibold text-base">{item.name}</div>
-                          <div className="text-sm text-gray-600 capitalize">{item.category}</div>
+                          <div className="font-semibold text-base">
+                            {item.name}
+                          </div>
+                          <div className="text-sm text-gray-600 capitalize">
+                            {item.category}
+                          </div>
                           <div className="text-sm font-semibold text-amber-600 mt-1">
                             {(item.priceCents / 100).toFixed(2)} €
                           </div>

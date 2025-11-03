@@ -222,27 +222,31 @@ export default function Admin({ onNavigate }) {
       <div className="w-full max-w-6xl bg-white rounded-2xl shadow p-5 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <div className="inline-flex rounded-xl border border-amber-200 overflow-hidden">
-            <button
-              onClick={() => setActiveTab("orders")}
-              className={`px-4 py-2 text-sm font-medium transition ${
-                activeTab === "orders"
-                  ? "bg-amber-400 text-black"
-                  : "bg-white hover:bg-amber-100"
-              }`}
-            >
-              Bestellungen
-            </button>
-            <button
-              onClick={() => setActiveTab("items")}
-              className={`px-4 py-2 text-sm font-medium transition ${
-                activeTab === "items"
-                  ? "bg-amber-400 text-black"
-                  : "bg-white hover:bg-amber-100"
-              }`}
-            >
-              Artikel verwalten
-            </button>
+
+          {/* ✅ Responsive Toggle Buttons */}
+          <div className="flex justify-center sm:justify-end w-full sm:w-auto">
+            <div className="inline-flex rounded-lg border border-amber-300 overflow-hidden text-sm sm:text-base">
+              <button
+                onClick={() => setActiveTab("orders")}
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors ${
+                  activeTab === "orders"
+                    ? "bg-amber-400 text-black"
+                    : "bg-white text-gray-700 hover:bg-amber-100"
+                }`}
+              >
+                Bestellungen
+              </button>
+              <button
+                onClick={() => setActiveTab("items")}
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors ${
+                  activeTab === "items"
+                    ? "bg-amber-400 text-black"
+                    : "bg-white text-gray-700 hover:bg-amber-100"
+                }`}
+              >
+                Artikel verwalten
+              </button>
+            </div>
           </div>
         </div>
 
@@ -253,7 +257,7 @@ export default function Admin({ onNavigate }) {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm"
+                className="select-clean"
               >
                 <option value="">Alle Status</option>
                 <option value="new">neu</option>
@@ -342,7 +346,7 @@ export default function Admin({ onNavigate }) {
                           onChange={(e) =>
                             updateOrderStatus(order._id, e.target.value)
                           }
-                          className="border rounded px-2 py-1 text-sm"
+                          className="select-clean"
                         >
                           <option value="new">neu</option>
                           <option value="accepted">akzeptiert</option>

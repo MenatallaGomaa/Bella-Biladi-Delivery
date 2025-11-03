@@ -7,3 +7,8 @@
   -ms-overflow-style: none; /* IE & Edge */
   scrollbar-width: none; /* Firefox */
 }
+/* Custom consistent dropdown style */
+.select-clean {
+  @apply border rounded-lg px-3 py-2 text-sm appearance-none pr-8 bg-no-repeat bg-[length:16px] bg-[right_0.75rem_center];
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23000000' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+}

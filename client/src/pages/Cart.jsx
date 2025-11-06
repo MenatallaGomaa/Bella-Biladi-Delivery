@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCart } from "./CartContext";
 import { useAuth } from "./AuthContext";
 
 export default function Cart({ onNavigate }) {
-  const { cart, addToCart, setCart } = useCart();
+  const { cart, addToCart, removeOneFromCart, removeAllFromCart } = useCart();
   const { user } = useAuth(); // ✅ get user
   const [deliveryMode, setDeliveryMode] = useState("Lieferung");
 
@@ -11,23 +11,30 @@ export default function Cart({ onNavigate }) {
 
   const increase = (item) => addToCart(item);
 
-  const decrease = (index) => {
-    const newCart = [...cart];
-    newCart.splice(index, 1);
-    setCart(newCart);
+  const decrease = (itemName) => {
+    removeOneFromCart(itemName);
   };
 
   const removeAll = (name) => {
-    setCart(cart.filter((i) => i.name !== name));
+    removeAllFromCart(name);
   };
 
-  const grouped = Object.values(
-    cart.reduce((acc, item) => {
-      if (!acc[item.name]) acc[item.name] = { ...item, qty: 0 };
-      acc[item.name].qty++;
-      return acc;
-    }, {})
-  );
+  // Group items while preserving the order of first appearance
+  const grouped = useMemo(() => {
+    const map = new Map();
+    const order = [];
+    
+    cart.forEach((item) => {
+      if (!map.has(item.name)) {
+        map.set(item.name, { ...item, qty: 0 });
+        order.push(item.name);
+      }
+      map.get(item.name).qty++;
+    });
+    
+    // Return items in the order they first appeared
+    return order.map(name => map.get(name));
+  }, [cart]);
 
   // Prevent page scroll (keep fixed height)
   useEffect(() => {
@@ -79,34 +86,40 @@ export default function Cart({ onNavigate }) {
         <div className="flex justify-center gap-2 mb-6">
           <button
             onClick={() => setDeliveryMode("Lieferung")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg ${
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg ${
               deliveryMode === "Lieferung"
                 ? "bg-amber-300 text-black font-semibold"
                 : "bg-gray-200 text-gray-600"
             }`}
           >
-            <img
-              src="/delivery.png"
-              alt="Lieferung"
-              className="w-5 h-5 ml-1 sm:ml-2" // 👈 added margin-left
-            />
-            Lieferung <span className="text-sm">15–35 min</span>
+            <div className="flex items-center gap-2">
+              <img
+                src="/delivery.png"
+                alt="Lieferung"
+                className="w-5 h-5"
+              />
+              <span>Lieferung</span>
+            </div>
+            <span className="text-xs">15–35 min</span>
           </button>
 
           <button
             onClick={() => setDeliveryMode("Abholung")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg ${
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 px-4 rounded-lg ${
               deliveryMode === "Abholung"
                 ? "bg-amber-300 text-black font-semibold"
                 : "bg-gray-200 text-gray-600"
             }`}
           >
-            <img
-              src="/delivery-man.png"
-              alt="Abholung"
-              className="w-5 h-5 ml-1 sm:ml-2" // 👈 same spacing for consistency
-            />
-            Abholung <span className="text-sm">15 min</span>
+            <div className="flex items-center gap-2">
+              <img
+                src="/delivery-man.png"
+                alt="Abholung"
+                className="w-5 h-5"
+              />
+              <span>Abholung</span>
+            </div>
+            <span className="text-xs">15 min</span>
           </button>
         </div>
 
@@ -144,9 +157,7 @@ export default function Cart({ onNavigate }) {
                     🗑️
                   </button>
                   <button
-                    onClick={() =>
-                      decrease(cart.findIndex((i) => i.name === item.name))
-                    }
+                    onClick={() => decrease(item.name)}
                     className="px-2 py-1 rounded bg-gray-200 hover:bg-gray-300"
                   >
                     −

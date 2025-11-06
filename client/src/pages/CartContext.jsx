@@ -19,10 +19,17 @@ export function CartProvider({ children }) {
     setCart((prev) => [...prev, item]);
   }
 
-  // ✅ Remove ONE instance by name
+  // ✅ Remove ONE instance by name (removes from the end to preserve order)
   function removeOneFromCart(name) {
     setCart((prev) => {
-      const index = prev.findIndex((i) => i.name === name);
+      // Find the last occurrence to preserve the order of first appearance
+      let index = -1;
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].name === name) {
+          index = i;
+          break;
+        }
+      }
       if (index !== -1) {
         const updated = [...prev];
         updated.splice(index, 1);

@@ -430,12 +430,6 @@ export default function CheckoutPayment({ onNavigate }) {
 
         <div className="bg-white rounded-2xl shadow-md p-6 w-full">
           <h2 className="text-xl font-bold mb-4">Bestelldetails</h2>
-          {loadingProfile && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <span className="inline-block h-3 w-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-              Profil wird geladen …
-            </div>
-          )}
           <div className="divide-y text-sm">
             <button
               className="w-full text-left py-3 flex justify-between items-center"

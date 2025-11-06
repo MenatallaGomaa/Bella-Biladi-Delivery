@@ -151,16 +151,20 @@ export default function NavBar({ activePage, onNavigate }) {
                     >
                       Profil
                     </button>
-                    <button
-                      onClick={() => {
-                        onNavigate("Orders");
-                        setMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium text-gray-700"
-                    >
-                      Meine Bestellungen
-                    </button>
+                    {/* Only show "My Orders" for non-admin users */}
+                    {user?.role !== "admin" && (
+                      <button
+                        onClick={() => {
+                          onNavigate("Orders");
+                          setMenuOpen(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium text-gray-700"
+                      >
+                        Meine Bestellungen
+                      </button>
+                    )}
 
+                    {/* Admin Dashboard - always show if user is admin */}
                     {user?.role === "admin" && (
                       <>
                         <div className="border-t border-gray-200 my-1"></div>

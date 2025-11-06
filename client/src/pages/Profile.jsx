@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
+import { useAuth } from "./AuthContext";
 
 export default function Profile({ onNavigate }) {
+  const { user: authUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -20,18 +22,62 @@ export default function Profile({ onNavigate }) {
         const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error("Profil laden fehlgeschlagen");
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          const errorMessage = errorData.error || "Profil laden fehlgeschlagen";
+          
+          // If user not found (404), the token is invalid - clear it and redirect to login
+          if (res.status === 404 || errorMessage.includes("not found") || errorMessage.includes("Please log in again")) {
+            console.warn("User not found in database. Clearing token and redirecting to login.");
+            localStorage.removeItem("token");
+            setTimeout(() => {
+              onNavigate("CheckoutLogin");
+            }, 2000);
+            setError("Ihr Benutzerkonto wurde nicht gefunden. Bitte melden Sie sich erneut an.");
+            return;
+          }
+          
+          // If unauthorized (401), token is invalid - clear it
+          if (res.status === 401) {
+            console.warn("Invalid token. Clearing and redirecting to login.");
+            localStorage.removeItem("token");
+            setTimeout(() => {
+              onNavigate("CheckoutLogin");
+            }, 2000);
+            setError("Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.");
+            return;
+          }
+          
+          throw new Error(errorMessage);
+        }
         const data = await res.json();
+        console.log("✅ Profile loaded:", data);
         setProfile(data);
         setAddresses(Array.isArray(data.addresses) ? data.addresses : []);
+        setError(""); // Clear any previous errors
       } catch (e) {
-        setError(e.message);
+        console.error("Profile load error:", e);
+        // Only set error if we haven't already set a redirect message
+        const currentError = e.message || "";
+        if (!currentError.includes("Bitte melden Sie sich erneut an") && !currentError.includes("nicht gefunden")) {
+          setError(e.message);
+          // If API fails but we have auth user, use that as fallback
+          if (authUser) {
+            setProfile({
+              name: authUser.name,
+              email: authUser.email,
+              role: authUser.role,
+              addresses: [],
+            });
+            setAddresses([]);
+          }
+        }
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, []);
+  }, [authUser, onNavigate]);
 
   useEffect(() => {
     return () => {
@@ -87,15 +133,57 @@ export default function Profile({ onNavigate }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-amber-200">
-        <div className="text-gray-700">Profil wird geladen…</div>
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-gray-700 text-sm">Laden...</span>
+        </div>
       </div>
     );
   }
 
-  if (!profile) {
+  if (!profile && !loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-amber-200">
-        <div className="bg-white p-6 rounded-xl shadow">Kein Profil gefunden.</div>
+        <div className="bg-white p-6 rounded-xl shadow max-w-md w-full mx-4">
+          <div className="text-center">
+            <div className="font-semibold mb-2">Kein Profil gefunden</div>
+            {error && (
+              <div className="text-sm text-red-600 mb-4">{error}</div>
+            )}
+            <button
+              onClick={() => {
+                // Try to reload
+                setLoading(true);
+                setError("");
+                const token = localStorage.getItem("token");
+                if (token) {
+                  fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/profile`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  })
+                    .then((res) => res.json())
+                    .then((data) => {
+                      setProfile(data);
+                      setAddresses(Array.isArray(data.addresses) ? data.addresses : []);
+                      setLoading(false);
+                    })
+                    .catch((e) => {
+                      setError(e.message);
+                      setLoading(false);
+                    });
+                }
+              }}
+              className="px-4 py-2 bg-amber-400 hover:bg-amber-500 rounded-lg text-sm font-medium"
+            >
+              Erneut versuchen
+            </button>
+            <button
+              onClick={() => onNavigate("Home")}
+              className="mt-2 px-4 py-2 text-blue-600 underline text-sm"
+            >
+              Zur Startseite
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

@@ -1,10 +1,23 @@
 import { useEffect, useState } from "react";
 import { euro } from "../api";
+import { useAuth } from "./AuthContext";
 
 export default function Orders({ onNavigate }) {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
 
+  // Redirect admin users to Admin Dashboard instead of showing order history
   useEffect(() => {
+    if (user?.role === "admin") {
+      onNavigate("Admin");
+      return;
+    }
+  }, [user, onNavigate]);
+
+  useEffect(() => {
+    // Don't fetch orders if user is admin (will be redirected)
+    if (user?.role === "admin") return;
+    
     const token = localStorage.getItem("token");
     if (!token) return;
     fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/orders/mine`, {
@@ -13,7 +26,7 @@ export default function Orders({ onNavigate }) {
       .then((r) => r.json())
       .then((data) => setOrders(Array.isArray(data) ? data : []))
       .catch(() => setOrders([]));
-  }, []);
+  }, [user]);
 
   return (
     <div className="bg-amber-200 flex flex-col items-center py-4 px-4">

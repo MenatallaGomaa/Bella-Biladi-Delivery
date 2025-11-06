@@ -107,7 +107,7 @@ export default function NavBar({ activePage, onNavigate }) {
             ))}
           </div>
 
-          <div className="flex items-center gap-2" ref={dropdownRef}>
+          <div className="flex items-center gap-2 relative" ref={dropdownRef}>
             {user ? (
               <>
                 <button
@@ -125,6 +125,9 @@ export default function NavBar({ activePage, onNavigate }) {
                   />
                   <span className="hidden sm:inline text-sm font-medium text-gray-700 max-w-[120px] truncate">
                     {user.name}
+                    {user.role === "admin" && (
+                      <span className="ml-1 text-xs text-amber-600 font-semibold">(Admin)</span>
+                    )}
                   </span>
                 </button>
 
@@ -159,15 +162,18 @@ export default function NavBar({ activePage, onNavigate }) {
                     </button>
 
                     {user?.role === "admin" && (
-                      <button
-                        onClick={() => {
-                          onNavigate("Admin");
-                          setMenuOpen(false);
-                        }}
-                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm font-medium text-gray-700"
-                      >
-                        Admin
-                      </button>
+                      <>
+                        <div className="border-t border-gray-200 my-1"></div>
+                        <button
+                          onClick={() => {
+                            onNavigate("Admin");
+                            setMenuOpen(false);
+                          }}
+                          className="block w-full text-left px-4 py-2 hover:bg-amber-50 text-sm font-medium text-amber-600 border-l-2 border-amber-400"
+                        >
+                          ⚙️ Admin Dashboard
+                        </button>
+                      </>
                     )}
 
                     <button

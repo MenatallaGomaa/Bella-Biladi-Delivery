@@ -9,9 +9,44 @@ import chatIcon from "/public/chat.png";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000";
 
+// Helper function to get available time slots based on day
+function getAvailableTimeSlots(day) {
+  const now = new Date();
+  const slots = [];
+  
+  // Generate all possible time slots (12:00 to 23:45 in 15-minute intervals)
+  for (let hour = 12; hour <= 23; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const formatted = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+      slots.push({ formatted, hour, minute });
+    }
+  }
+  
+  if (day === "Heute") {
+    // For today, filter slots to only show those at least 45 minutes in the future
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const minTime = currentHour * 60 + currentMinute + 45; // 45 minutes from now
+    
+    const available = slots
+      .filter(({ hour, minute }) => {
+        const slotTime = hour * 60 + minute;
+        return slotTime >= minTime;
+      })
+      .map(({ formatted }) => formatted);
+    
+    // If no slots available for today (e.g., it's past 23:45), return empty array
+    // The UI will handle this by showing a message or auto-switching to tomorrow
+    return available;
+  } else {
+    // For tomorrow, show all slots
+    return slots.map(({ formatted }) => formatted);
+  }
+}
+
 export default function CheckoutPayment({ onNavigate }) {
   const { user } = useAuth();
-  const { cart, addToCart, removeOneFromCart, removeAllFromCart, clearCart } =
+  const { cart, addToCart, removeOneFromCart, removeAllFromCart, clearCart, setCart } =
     useCart();
 
   const redirectTimeoutRef = useRef(null);
@@ -43,6 +78,7 @@ export default function CheckoutPayment({ onNavigate }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [confirmation, setConfirmation] = useState(null);
+  const [validationAttempted, setValidationAttempted] = useState(false);
 
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -55,6 +91,42 @@ export default function CheckoutPayment({ onNavigate }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [cartValidationError, setCartValidationError] = useState("");
+
+  // Validate cart items against current database
+  useEffect(() => {
+    async function validateCartItems() {
+      if (cart.length === 0) {
+        setCartValidationError("");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/items`);
+        if (!res.ok) return;
+        
+        const allItems = await res.json();
+        const validItemIds = new Set(allItems.map(item => String(item._id)));
+        
+        const invalidItems = cart.filter(item => {
+          const itemId = item._id || item.id;
+          return itemId && !validItemIds.has(String(itemId));
+        });
+
+        if (invalidItems.length > 0) {
+          setCartValidationError(
+            `${invalidItems.length} Artikel im Warenkorb sind nicht mehr verfügbar. Bitte entferne sie oder lade die Seite neu.`
+          );
+        } else {
+          setCartValidationError("");
+        }
+      } catch (err) {
+        console.warn("Could not validate cart items:", err);
+      }
+    }
+
+    validateCartItems();
+  }, [cart]);
 
   useEffect(() => {
     document.body.style.overflow = editing || showItems ? "hidden" : "auto";
@@ -117,6 +189,7 @@ export default function CheckoutPayment({ onNavigate }) {
   }, [user]);
 
   const validateForm = () => {
+    setValidationAttempted(true);
     const newErrors = {};
 
     if (!form.name.trim()) newErrors.name = "Bitte gib deinen Namen ein.";
@@ -133,14 +206,22 @@ export default function CheckoutPayment({ onNavigate }) {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
+      // Scroll to top to show the error message
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      
+      // Try to focus on first error field if modal is open
       const firstKey = Object.keys(newErrors)[0];
       const element = document.getElementById(`input-${firstKey}`);
       if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-        element.focus();
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.focus();
+        }, 300);
       }
       return false;
     }
+    
+    setValidationAttempted(false);
     return true;
   };
 
@@ -154,9 +235,12 @@ export default function CheckoutPayment({ onNavigate }) {
     }));
     setErrors((prev) => ({
       ...prev,
+      name: undefined,
+      phone: undefined,
       street: undefined,
       postalCity: undefined,
     }));
+    setValidationAttempted(false);
   };
 
   const handleOrderSubmit = async () => {
@@ -169,6 +253,41 @@ export default function CheckoutPayment({ onNavigate }) {
       return;
     }
 
+    // First, validate that all items still exist in the database
+    try {
+      const itemsRes = await fetch(`${API_BASE}/api/items`);
+      if (!itemsRes.ok) throw new Error("Could not fetch items");
+      const allItems = await itemsRes.json();
+      const validItemIds = new Set(allItems.map(item => String(item._id)));
+      
+      const invalidItems = grouped.filter(item => {
+        const itemId = item._id || item.id;
+        return !itemId || !validItemIds.has(String(itemId));
+      });
+
+      if (invalidItems.length > 0) {
+        setSubmitError(
+          `Einige Artikel im Warenkorb sind nicht mehr verfügbar. Die nicht verfügbaren Artikel wurden entfernt.`
+        );
+        // Clear invalid items from cart
+        const validCartItems = cart.filter(item => {
+          const itemId = item._id || item.id;
+          return itemId && validItemIds.has(String(itemId));
+        });
+        if (validCartItems.length === 0) {
+          clearCart();
+        } else {
+          // Update cart to only include valid items
+          setCart(validCartItems);
+        }
+        return;
+      }
+    } catch (err) {
+      console.error("Error validating cart items:", err);
+      setSubmitError("Fehler beim Validieren der Artikel. Bitte versuche es erneut.");
+      return;
+    }
+
     const itemsPayload = [];
     for (const item of grouped) {
       const itemId = item._id || item.id;
@@ -178,7 +297,13 @@ export default function CheckoutPayment({ onNavigate }) {
         );
         return;
       }
-      itemsPayload.push({ itemId, qty: item.qty });
+      // Ensure qty is a valid number
+      const qty = Number(item.qty) || 1;
+      if (qty < 1) {
+        setSubmitError("Ungültige Artikelmenge.");
+        return;
+      }
+      itemsPayload.push({ itemId: String(itemId), qty });
     }
 
     const payload = {
@@ -209,6 +334,29 @@ export default function CheckoutPayment({ onNavigate }) {
       });
       const data = await res.json();
       if (!res.ok) {
+        // If server says items not found, clean up the cart
+        if (data.error && data.error.includes("Some items not found")) {
+          // Fetch current items and filter out invalid ones
+          try {
+            const itemsRes = await fetch(`${API_BASE}/api/items`);
+            if (itemsRes.ok) {
+              const allItems = await itemsRes.json();
+              const validItemIds = new Set(allItems.map(item => String(item._id)));
+              const validCartItems = cart.filter(item => {
+                const itemId = item._id || item.id;
+                return itemId && validItemIds.has(String(itemId));
+              });
+              if (validCartItems.length === 0) {
+                clearCart();
+              } else {
+                setCart(validCartItems);
+              }
+            }
+          } catch (cleanupErr) {
+            console.error("Error cleaning up cart:", cleanupErr);
+          }
+          throw new Error("Einige Artikel im Warenkorb sind nicht mehr verfügbar. Die nicht verfügbaren Artikel wurden entfernt. Bitte versuche es erneut.");
+        }
         throw new Error(data.error || "Bestellung fehlgeschlagen");
       }
 
@@ -242,6 +390,44 @@ export default function CheckoutPayment({ onNavigate }) {
       </button>
 
       <div className="w-full max-w-5xl grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6 mt-14 sm:mt-16">
+        {/* Validation Error Message */}
+        {validationAttempted && Object.keys(errors).length > 0 && (
+          <div className="xl:col-span-2 bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-800 mb-1">
+                  Pflichtfelder müssen ausgefüllt werden
+                </h3>
+                <p className="text-sm text-red-700">
+                  Um fortzufahren, bitte fülle alle mit <span className="text-red-500">*</span> markierten Felder aus.
+                </p>
+                <ul className="mt-2 text-sm text-red-600 list-disc list-inside space-y-1">
+                  {errors.name && <li>Name</li>}
+                  {errors.email && <li>E-Mail</li>}
+                  {errors.phone && <li>Telefonnummer</li>}
+                  {errors.street && <li>Straße und Hausnummer</li>}
+                  {errors.postalCity && <li>PLZ und Stadt</li>}
+                  {errors.time && <li>Lieferzeit</li>}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl shadow-md p-6 w-full">
           <h2 className="text-xl font-bold mb-4">Bestelldetails</h2>
           {loadingProfile && (
@@ -362,6 +548,40 @@ export default function CheckoutPayment({ onNavigate }) {
               <span>{total.toFixed(2)} €</span>
             </div>
           </div>
+
+          {cartValidationError && (
+            <div className="mt-4 bg-yellow-100 border border-yellow-300 text-yellow-800 text-xs sm:text-sm px-3 py-2 rounded">
+              <div className="flex items-start gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <div>
+                  <strong>Hinweis:</strong> {cartValidationError}
+                  <button
+                    onClick={() => {
+                      clearCart();
+                      setCartValidationError("");
+                      onNavigate("Home");
+                    }}
+                    className="ml-2 text-yellow-700 underline font-semibold"
+                  >
+                    Warenkorb leeren
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {submitError && (
             <div className="mt-4 bg-red-100 border border-red-300 text-red-700 text-xs sm:text-sm px-3 py-2 rounded">
@@ -518,7 +738,14 @@ export default function CheckoutPayment({ onNavigate }) {
                   onChange={(e) => {
                     setErrors((prev) => ({ ...prev, name: undefined }));
                     setSubmitError("");
+                    setValidationAttempted(false);
                     setForm({ ...form, name: e.target.value });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setEditing(null);
+                    }
                   }}
                 />
                 {errors.name && (
@@ -535,7 +762,14 @@ export default function CheckoutPayment({ onNavigate }) {
                   onChange={(e) => {
                     setErrors((prev) => ({ ...prev, email: undefined }));
                     setSubmitError("");
+                    setValidationAttempted(false);
                     setForm({ ...form, email: e.target.value });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setEditing(null);
+                    }
                   }}
                 />
                 {errors.email && (
@@ -552,7 +786,14 @@ export default function CheckoutPayment({ onNavigate }) {
                   onChange={(e) => {
                     setErrors((prev) => ({ ...prev, phone: undefined }));
                     setSubmitError("");
+                    setValidationAttempted(false);
                     setForm({ ...form, phone: e.target.value });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setEditing(null);
+                    }
                   }}
                 />
                 {errors.phone && (
@@ -601,7 +842,14 @@ export default function CheckoutPayment({ onNavigate }) {
                   onChange={(e) => {
                     setErrors((prev) => ({ ...prev, street: undefined }));
                     setSubmitError("");
+                    setValidationAttempted(false);
                     setForm({ ...form, street: e.target.value });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setEditing(null);
+                    }
                   }}
                 />
                 {errors.street && (
@@ -618,7 +866,14 @@ export default function CheckoutPayment({ onNavigate }) {
                   onChange={(e) => {
                     setErrors((prev) => ({ ...prev, postalCity: undefined }));
                     setSubmitError("");
+                    setValidationAttempted(false);
                     setForm({ ...form, postalCity: e.target.value });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setEditing(null);
+                    }
                   }}
                 />
                 {errors.postalCity && (
@@ -645,6 +900,8 @@ export default function CheckoutPayment({ onNavigate }) {
                     checked={form.time.type === "asap"}
                     onChange={() => {
                       setSubmitError("");
+                      setValidationAttempted(false);
+                      setErrors((prev) => ({ ...prev, time: undefined }));
                       setForm({
                         ...form,
                         time: { type: "asap", label: "So schnell wie möglich" },
@@ -660,15 +917,36 @@ export default function CheckoutPayment({ onNavigate }) {
                     checked={form.time.type === "later"}
                     onChange={() => {
                       setSubmitError("");
-                      setForm({
-                        ...form,
-                        time: {
-                          type: "later",
-                          day: "Heute",
-                          hour: "12:00",
-                          label: "Heute, 12:00 Uhr",
-                        },
-                      });
+                      setValidationAttempted(false);
+                      setErrors((prev) => ({ ...prev, time: undefined }));
+                      // Get first available slot for today
+                      const availableSlots = getAvailableTimeSlots("Heute");
+                      
+                      // If no slots available for today, use tomorrow
+                      if (availableSlots.length === 0) {
+                        const tomorrowSlots = getAvailableTimeSlots("Morgen");
+                        const firstSlot = tomorrowSlots[0] || "12:00";
+                        setForm({
+                          ...form,
+                          time: {
+                            type: "later",
+                            day: "Morgen",
+                            hour: firstSlot,
+                            label: `Morgen, ${firstSlot} Uhr`,
+                          },
+                        });
+                      } else {
+                        const firstSlot = availableSlots[0] || "12:00";
+                        setForm({
+                          ...form,
+                          time: {
+                            type: "later",
+                            day: "Heute",
+                            hour: firstSlot,
+                            label: `Heute, ${firstSlot} Uhr`,
+                          },
+                        });
+                      }
                     }}
                   />
                   <span>Für später planen</span>
@@ -678,12 +956,35 @@ export default function CheckoutPayment({ onNavigate }) {
                     <select
                       className="w-full border border-amber-300 rounded-lg px-3 py-2 focus:ring-amber-400 focus:border-amber-400 outline-none"
                       value={form.time.day}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          time: { ...prev.time, day: e.target.value },
-                        }))
-                      }
+                      onChange={(e) => {
+                        const selectedDay = e.target.value;
+                        // Calculate available time slots for the selected day
+                        const availableSlots = getAvailableTimeSlots(selectedDay);
+                        
+                        // If no slots available for today, switch to tomorrow
+                        if (selectedDay === "Heute" && availableSlots.length === 0) {
+                          const tomorrowSlots = getAvailableTimeSlots("Morgen");
+                          const firstSlot = tomorrowSlots[0] || "12:00";
+                          setForm((prev) => ({
+                            ...prev,
+                            time: {
+                              ...prev.time,
+                              day: "Morgen",
+                              hour: firstSlot,
+                            },
+                          }));
+                        } else {
+                          const firstAvailableSlot = availableSlots[0] || "12:00";
+                          setForm((prev) => ({
+                            ...prev,
+                            time: {
+                              ...prev.time,
+                              day: selectedDay,
+                              hour: firstAvailableSlot,
+                            },
+                          }));
+                        }
+                      }}
                     >
                       <option value="Heute">Heute</option>
                       <option value="Morgen">Morgen</option>
@@ -698,22 +999,27 @@ export default function CheckoutPayment({ onNavigate }) {
                         }))
                       }
                     >
-                      {Array.from({ length: 44 }, (_, i) => {
-                        const hour = 12 + Math.floor(i / 4);
-                        const minute = (i % 4) * 15;
-                        if (hour > 23) return null;
-                        const formatted = `${hour
-                          .toString()
-                          .padStart(2, "0")}:${minute
-                          .toString()
-                          .padStart(2, "0")}`;
-                        return (
+                      {(() => {
+                        const availableSlots = getAvailableTimeSlots(form.time.day);
+                        if (availableSlots.length === 0 && form.time.day === "Heute") {
+                          return (
+                            <option value="" disabled>
+                              Keine Slots verfügbar - bitte wähle Morgen
+                            </option>
+                          );
+                        }
+                        return availableSlots.map((formatted) => (
                           <option key={formatted} value={formatted}>
                             {formatted}
                           </option>
-                        );
-                      })}
+                        ));
+                      })()}
                     </select>
+                    {form.time.day === "Heute" && getAvailableTimeSlots("Heute").length === 0 && (
+                      <p className="text-sm text-amber-600 mt-2">
+                        ⚠️ Keine Slots mehr verfügbar für heute. Bitte wähle "Morgen".
+                      </p>
+                    )}
                   </div>
                 )}
 

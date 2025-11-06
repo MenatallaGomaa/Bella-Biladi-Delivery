@@ -66,18 +66,57 @@ r.post("/", async (req, res) => {
     const ids = items.map((i) => i.itemId);
     const dbItems = await Item.find({ _id: { $in: ids } });
 
+    // Validate all items exist
+    const missingItems = items.filter((i) => {
+      const found = dbItems.find((d) => String(d._id) === String(i.itemId));
+      return !found;
+    });
+
+    if (missingItems.length > 0) {
+      return res.status(400).json({ 
+        error: `Some items not found: ${missingItems.map(i => i.itemId).join(", ")}` 
+      });
+    }
+
     const cart = items.map((i) => {
-      const it = dbItems.find((d) => String(d._id) === i.itemId);
+      const it = dbItems.find((d) => String(d._id) === String(i.itemId));
+      if (!it) {
+        throw new Error(`Item ${i.itemId} not found`);
+      }
+      const priceCents = Number(it.priceCents);
+      const qty = Number(i.qty);
+      
+      if (isNaN(priceCents) || priceCents < 0) {
+        throw new Error(`Invalid price for item ${it.name}: ${it.priceCents}`);
+      }
+      if (isNaN(qty) || qty < 1) {
+        throw new Error(`Invalid quantity for item ${it.name}: ${i.qty}`);
+      }
+      
       return {
-        itemId: i.itemId,
-        name: it?.name,
-        priceCents: it?.priceCents,
-        qty: i.qty,
+        itemId: String(i.itemId),
+        name: it.name || "Unknown Item",
+        priceCents: Math.round(priceCents),
+        qty: Math.round(qty),
       };
     });
 
-    const subtotal = cart.reduce((s, i) => s + i.priceCents * i.qty, 0);
-    const total = subtotal; // Add delivery fee if needed later
+    // Calculate totals with proper validation
+    const subtotal = cart.reduce((s, i) => {
+      const price = Number(i.priceCents);
+      const qty = Number(i.qty);
+      if (isNaN(price) || isNaN(qty)) {
+        throw new Error(`Invalid calculation for item ${i.name}`);
+      }
+      return s + (price * qty);
+    }, 0);
+    
+    if (isNaN(subtotal) || subtotal < 0) {
+      console.error("Invalid subtotal calculation:", { cart, subtotal });
+      return res.status(400).json({ error: "Invalid order total calculation" });
+    }
+    
+    const total = Math.round(subtotal); // Add delivery fee if needed later
     const ref = `BB-${new Date().getFullYear()}-${nano()}`;
 
     // Save order to DB
@@ -97,13 +136,21 @@ r.post("/", async (req, res) => {
 
     const order = await Order.create({
       ref,
-      userId,
+      userId: userId || undefined,
       items: cart,
       totals: {
-        subtotalCents: subtotal,
-        grandTotalCents: total,
+        subtotalCents: Math.round(subtotal),
+        deliveryFeeCents: 0,
+        grandTotalCents: Math.round(total),
       },
-      customer: { ...customer, notes },
+      customer: { 
+        name: customer?.name || "",
+        phone: customer?.phone || "",
+        address: customer?.address || "",
+        email: customer?.email || "",
+        desiredTime: customer?.desiredTime || "So schnell wie möglich",
+        notes: notes || customer?.notes || "",
+      },
       method: "cash_on_delivery",
     });
 
@@ -167,7 +214,15 @@ r.post("/", async (req, res) => {
     res.status(201).json({ ok: true, ref: order.ref, id: order._id });
   } catch (err) {
     console.error("❌ Error creating order:", err);
-    res.status(500).json({ error: "Order creation failed" });
+    console.error("Error details:", {
+      message: err.message,
+      stack: err.stack,
+      body: req.body,
+    });
+    res.status(500).json({ 
+      error: err.message || "Order creation failed",
+      details: process.env.NODE_ENV !== "production" ? err.message : undefined
+    });
   }
 });
 

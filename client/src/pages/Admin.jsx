@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "./AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000";
 
 export default function Admin({ onNavigate }) {
+  const { user } = useAuth();
   const token = localStorage.getItem("token");
 
   const canAccess = useMemo(() => {
+    // Check both AuthContext user and token for admin role
+    if (user?.role === "admin") return true;
     try {
       const payload = JSON.parse(atob((token || "").split(".")[1] || "e30="));
       return payload?.role === "admin";
     } catch {
       return false;
     }
-  }, [token]);
+  }, [token, user]);
 
   const [activeTab, setActiveTab] = useState("orders");
 

@@ -19,7 +19,14 @@ export function AuthProvider({ children }) {
         });
         if (res.ok) {
           const profile = await res.json();
-          setUser({ id: profile._id, name: profile.name, email: profile.email, role: profile.role, emailVerified: profile.emailVerified });
+          // Ensure user object includes role with fallback
+          setUser({ 
+            id: profile._id, 
+            name: profile.name, 
+            email: profile.email, 
+            role: profile.role || "user", 
+            emailVerified: profile.emailVerified || false 
+          });
         } else {
           localStorage.removeItem("token");
         }
@@ -54,8 +61,16 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Login fehlgeschlagen");
     localStorage.setItem("token", data.token);
-    setUser(data.user);
-    return data.user;
+    // Ensure user object includes role
+    const userData = {
+      id: data.user.id || data.user._id,
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role || "user",
+      emailVerified: data.user.emailVerified || false,
+    };
+    setUser(userData);
+    return userData;
   };
 
   const logout = () => {

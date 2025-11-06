@@ -43,17 +43,28 @@ router.post("/register", async (req, res) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password)
       return res.status(400).json({ error: "Missing fields" });
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    
+    // Trim and normalize inputs
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    const trimmedName = name.trim();
+    
+    if (!trimmedName || !trimmedEmail || !trimmedPassword) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    
+    const existing = await User.findOne({ email: trimmedEmail });
     if (existing)
-      return res.status(409).json({ error: "Email already registered" });
-    const passwordHash = await bcrypt.hash(password, 10);
+      return res.status(409).json({ error: "Diese E-Mail ist bereits registriert. Bitte einloggen." });
+    
+    const passwordHash = await bcrypt.hash(trimmedPassword, 10);
 
     const emailVerificationToken = crypto.randomBytes(20).toString("hex");
     const emailVerificationExpires = new Date(Date.now() + 1000 * 60 * 60 * 24);
 
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: trimmedName,
+      email: trimmedEmail,
       passwordHash,
       emailVerificationToken,
       emailVerificationExpires,
@@ -88,16 +99,46 @@ router.post("/register", async (req, res) => {
 
 // Login
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user) return res.status(401).json({ error: "Invalid credentials" });
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) return res.status(401).json({ error: "Invalid credentials" });
-  const token = signToken(user);
-  res.json({
-    token,
-    user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: user.emailVerified },
-  });
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    // Trim and normalize inputs (same as registration)
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+
+    const user = await User.findOne({ email: trimmedEmail });
+    
+    if (!user) {
+      console.log(`Login attempt failed: User not found for email ${trimmedEmail}`);
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Check if user has a password hash (in case of old records)
+    if (!user.passwordHash) {
+      console.log(`Login attempt failed: User ${user.email} has no password hash`);
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const ok = await bcrypt.compare(trimmedPassword, user.passwordHash);
+    
+    if (!ok) {
+      console.log(`Login attempt failed: Password mismatch for email ${trimmedEmail}`);
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const token = signToken(user);
+    res.json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: user.emailVerified },
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Login failed" });
+  }
 });
 
 // Profile (basic, no orders included here)

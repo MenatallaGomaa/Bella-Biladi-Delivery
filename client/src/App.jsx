@@ -181,6 +181,12 @@ function MainApp() {
       return;
     }
 
+    // 🔐 Redirect admin users from Orders to Admin Dashboard
+    if (newPage === "Orders" && user?.role === "admin") {
+      setPage("Admin");
+      return;
+    }
+
     // ✅ update page normally
     setPage(newPage);
   };

@@ -391,28 +391,28 @@ const items = [
     description: "Cream sauce, broccoli, chicken breast & pesto",
     priceCents: 950,
     category: "Baked Pasta",
-    imageUrl: "/pasta-ueberbacken.jpg",
+    imageUrl: "/Pasta-ueberbacken.jpeg",
   },
   {
     name: "Foraged Vegetables",
     description: "Cream sauce, mushrooms, spinach, cherry tomatoes & pesto",
     priceCents: 950,
     category: "Baked Pasta",
-    imageUrl: "/pasta-ueberbacken.jpg",
+    imageUrl: "/Pasta-ueberbacken.jpeg",
   },
   {
     name: "Vegaforno",
     description: "Vegan cream sauce, spinach, mushrooms, corn & vegan cheese",
     priceCents: 950,
     category: "Baked Pasta",
-    imageUrl: "/pasta-ueberbacken.jpg",
+    imageUrl: "/Pasta-ueberbacken.jpeg",
   },
   {
     name: "Bolognese al Forno",
     description: "Tomato sauce, Parmesan cheese & ground beef",
     priceCents: 950,
     category: "Baked Pasta",
-    imageUrl: "/pasta-ueberbacken.jpg",
+    imageUrl: "/Pasta-ueberbacken.jpeg",
   },
 ];
 

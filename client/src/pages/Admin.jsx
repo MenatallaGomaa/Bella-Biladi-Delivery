@@ -501,12 +501,23 @@ export default function Admin({ onNavigate }) {
                     />
 
                     {/* 3️⃣ Image preview */}
-                    {itemForm.imageUrl && (
+                    {itemForm.imageUrl ? (
                       <div className="mt-2">
                         <img
                           src={itemForm.imageUrl}
                           alt="Vorschau"
                           className="h-24 w-24 object-cover rounded-lg border"
+                          onError={(e) => {
+                            e.target.src = "/main.jpeg";
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-2">
+                        <img
+                          src="/main.jpeg"
+                          alt="Default preview"
+                          className="h-24 w-24 object-cover rounded-lg border opacity-50"
                         />
                       </div>
                     )}
@@ -563,17 +574,14 @@ export default function Admin({ onNavigate }) {
                       className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col gap-3"
                     >
                       <div className="flex items-start gap-3">
-                        {item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt={item.name}
-                            className="w-16 h-16 object-cover rounded-lg border border-amber-100"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 bg-amber-100 rounded-lg flex items-center justify-center text-xs text-gray-500">
-                            Kein Bild
-                          </div>
-                        )}
+                        <img
+                          src={item.imageUrl || "/main.jpeg"}
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded-lg border border-amber-100"
+                          onError={(e) => {
+                            e.target.src = "/main.jpeg";
+                          }}
+                        />
                         <div className="flex-1">
                           <div className="font-semibold text-base">
                             {item.name}

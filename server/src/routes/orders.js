@@ -158,32 +158,156 @@ r.post("/", async (req, res) => {
     if (customer?.email && transporter) {
       const desiredTime = customer?.desiredTime || "So schnell wie möglich";
       const commentBlock = customer?.notes
-        ? `<p><b>Hinweis:</b> ${customer.notes}</p>`
+        ? `<p style="margin: 15px 0; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><b>📝 Ihre Notiz:</b> ${customer.notes}</p>`
         : "";
 
+      // Calculate estimated delivery time
+      const now = new Date();
+      let estimatedDeliveryTime = "";
+      let estimatedDeliveryText = "";
+      
+      if (desiredTime === "So schnell wie möglich" || desiredTime.toLowerCase().includes("so schnell")) {
+        // ASAP: Add 30-45 minutes
+        const estimatedTime = new Date(now.getTime() + 35 * 60 * 1000); // 35 minutes average
+        const hours = estimatedTime.getHours().toString().padStart(2, "0");
+        const minutes = estimatedTime.getMinutes().toString().padStart(2, "0");
+        estimatedDeliveryTime = `${hours}:${minutes} Uhr`;
+        estimatedDeliveryText = `ca. 30-45 Minuten (voraussichtlich um ${estimatedDeliveryTime})`;
+      } else if (desiredTime.toLowerCase().includes("heute")) {
+        // Extract time from "Heute, HH:MM Uhr"
+        const timeMatch = desiredTime.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          estimatedDeliveryTime = `${timeMatch[1]}:${timeMatch[2]} Uhr`;
+          estimatedDeliveryText = `um ${estimatedDeliveryTime}`;
+        } else {
+          estimatedDeliveryText = desiredTime;
+        }
+      } else if (desiredTime.toLowerCase().includes("morgen")) {
+        // Extract time from "Morgen, HH:MM Uhr"
+        const timeMatch = desiredTime.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          estimatedDeliveryTime = `Morgen um ${timeMatch[1]}:${timeMatch[2]} Uhr`;
+          estimatedDeliveryText = estimatedDeliveryTime;
+        } else {
+          estimatedDeliveryText = desiredTime;
+        }
+      } else {
+        estimatedDeliveryText = desiredTime;
+      }
+
+      const orderDate = new Date(order.createdAt).toLocaleDateString("de-DE", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
       const html = `
-        <div style="font-family:Arial,sans-serif;color:#333">
-          <h2>Hallo ${customer.name || "Kunde"} 👋</h2>
-          <p>Vielen Dank für Ihre Bestellung bei <b>BellaBiladi</b>!</p>
-          <p><b>Bestellnummer:</b> ${ref}</p>
-          <h3>Ihre Bestellung:</h3>
-          <ul>
-            ${cart
-              .map(
-                (i) =>
-                  `<li>${i.qty}× ${i.name} – €${(
-                    (i.priceCents * i.qty) /
-                    100
-                  ).toFixed(2)}</li>`
-              )
-              .join("")}
-          </ul>
-          <p><b>Gesamtbetrag:</b> €${(total / 100).toFixed(2)}</p>
-          <p><b>Lieferzeit:</b> ${desiredTime}</p>
-          ${commentBlock}
-          <p>Wir bereiten Ihre Bestellung gerade vor und liefern bald!</p>
-          <br/>
-          <p>Mit freundlichen Grüßen,<br><b>BellaBiladi-Team 🍕</b></p>
+        <div style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;background-color:#ffffff;">
+          <!-- Header -->
+          <div style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0;">
+            <h1 style="color:#ffffff;margin:0;font-size:28px;">🍕 BellaBiladi</h1>
+            <p style="color:#fef3c7;margin:10px 0 0 0;font-size:16px;">Bestellbestätigung</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding:30px;background-color:#ffffff;">
+            <h2 style="color:#1f2937;margin-top:0;font-size:24px;">Hallo ${customer.name || "Kunde"} 👋</h2>
+            <p style="color:#4b5563;font-size:16px;line-height:1.6;">Vielen Dank für Ihre Bestellung bei <b style="color:#f59e0b;">BellaBiladi</b>! Wir freuen uns, Ihnen köstliches Essen zu liefern.</p>
+
+            <!-- Order Details Box -->
+            <div style="background-color:#f9fafb;border:2px solid #f59e0b;border-radius:8px;padding:20px;margin:25px 0;">
+              <div style="margin-bottom:15px;">
+                <p style="margin:5px 0;color:#6b7280;font-size:14px;">Bestellnummer</p>
+                <p style="margin:5px 0;color:#1f2937;font-size:20px;font-weight:bold;letter-spacing:1px;">${ref}</p>
+              </div>
+              <div style="margin-bottom:15px;">
+                <p style="margin:5px 0;color:#6b7280;font-size:14px;">Bestelldatum</p>
+                <p style="margin:5px 0;color:#1f2937;font-size:16px;">${orderDate}</p>
+              </div>
+              <div>
+                <p style="margin:5px 0;color:#6b7280;font-size:14px;">Gewünschte Lieferzeit</p>
+                <p style="margin:5px 0;color:#1f2937;font-size:16px;font-weight:600;">${desiredTime}</p>
+              </div>
+            </div>
+
+            <!-- Delivery Time Estimation -->
+            <div style="background-color:#fef3c7;border-left:4px solid #f59e0b;padding:15px;margin:20px 0;border-radius:4px;">
+              <p style="margin:0;color:#92400e;font-size:15px;font-weight:600;">⏰ Geschätzte Lieferzeit:</p>
+              <p style="margin:5px 0 0 0;color:#78350f;font-size:16px;">${estimatedDeliveryText}</p>
+            </div>
+
+            <!-- Order Items -->
+            <h3 style="color:#1f2937;font-size:20px;margin:30px 0 15px 0;border-bottom:2px solid #f59e0b;padding-bottom:10px;">Ihre Bestellung:</h3>
+            <div style="background-color:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+              ${cart
+                .map(
+                  (i) => `
+                    <div style="padding:15px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+                      <div style="flex:1;">
+                        <p style="margin:0;color:#1f2937;font-size:16px;font-weight:600;">${i.qty}× ${i.name}</p>
+                      </div>
+                      <div style="text-align:right;">
+                        <p style="margin:0;color:#f59e0b;font-size:16px;font-weight:bold;">€${(
+                          (i.priceCents * i.qty) /
+                          100
+                        ).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+
+            <!-- Totals -->
+            <div style="margin-top:20px;padding-top:20px;border-top:2px solid #e5e7eb;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                <p style="margin:0;color:#6b7280;font-size:16px;">Zwischensumme:</p>
+                <p style="margin:0;color:#1f2937;font-size:16px;">€${(subtotal / 100).toFixed(2)}</p>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                <p style="margin:0;color:#6b7280;font-size:16px;">Lieferkosten:</p>
+                <p style="margin:0;color:#1f2937;font-size:16px;">€0.00</p>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding-top:15px;border-top:2px solid #f59e0b;margin-top:15px;">
+                <p style="margin:0;color:#1f2937;font-size:20px;font-weight:bold;">Gesamtbetrag:</p>
+                <p style="margin:0;color:#f59e0b;font-size:24px;font-weight:bold;">€${(total / 100).toFixed(2)}</p>
+              </div>
+            </div>
+
+            <!-- Delivery Address -->
+            ${customer?.address ? `
+              <div style="margin-top:25px;padding:15px;background-color:#f9fafb;border-radius:8px;">
+                <p style="margin:0 0 10px 0;color:#6b7280;font-size:14px;font-weight:600;">📍 Lieferadresse:</p>
+                <p style="margin:0;color:#1f2937;font-size:16px;line-height:1.6;">${customer.address}</p>
+                ${customer?.phone ? `<p style="margin:10px 0 0 0;color:#1f2937;font-size:16px;">📞 ${customer.phone}</p>` : ""}
+              </div>
+            ` : ""}
+
+            ${commentBlock}
+
+            <!-- Happy Meal Message -->
+            <div style="background:linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);padding:20px;margin:30px 0;border-radius:8px;text-align:center;">
+              <p style="margin:0;color:#78350f;font-size:18px;font-weight:600;">🍽️ Guten Appetit und eine schöne Mahlzeit! 🍽️</p>
+              <p style="margin:10px 0 0 0;color:#92400e;font-size:15px;">Wir wünschen Ihnen viel Freude beim Genießen Ihrer Bestellung!</p>
+            </div>
+
+            <!-- Footer Message -->
+            <p style="color:#4b5563;font-size:15px;line-height:1.6;margin-top:30px;">Wir bereiten Ihre Bestellung mit viel Liebe vor und liefern sie Ihnen pünktlich zu. Falls Sie Fragen haben, kontaktieren Sie uns gerne!</p>
+
+            <div style="margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="margin:0;color:#6b7280;font-size:14px;">Mit freundlichen Grüßen,</p>
+              <p style="margin:5px 0 0 0;color:#f59e0b;font-size:18px;font-weight:bold;">Ihr BellaBiladi-Team 🍕</p>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color:#1f2937;padding:20px;text-align:center;border-radius:0 0 8px 8px;">
+            <p style="margin:0;color:#9ca3af;font-size:12px;">BellaBiladi | Probstheidaer Straße 21, 04277 Leipzig, Germany</p>
+            <p style="margin:5px 0 0 0;color:#9ca3af;font-size:12px;">Phone: 01521 3274837</p>
+          </div>
         </div>
       `;
 

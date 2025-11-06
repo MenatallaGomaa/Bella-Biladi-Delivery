@@ -18,7 +18,39 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Middleware
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : [];
+
+// Always allow localhost in development
+const localhostOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3000"
+];
+
+app.use(cors({ 
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Always allow localhost in development
+    if (localhostOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed origins list
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+      return callback(null, true);
+    }
+    
+    callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use("/public", express.static(path.join(__dirname, "../public")));
 
@@ -39,7 +71,12 @@ const clientDistPath = path.join(__dirname, "../client/dist");
 app.use(express.static(clientDistPath));
 
 // For any non-API routes, serve React index.html
-app.get((req, res) => {
+app.use((req, res, next) => {
+  // Skip API routes and static files
+  if (req.path.startsWith("/api") || req.path.startsWith("/public")) {
+    return next();
+  }
+  // Serve index.html for all other routes (React Router)
   res.sendFile(path.join(clientDistPath, "index.html"));
 });
 

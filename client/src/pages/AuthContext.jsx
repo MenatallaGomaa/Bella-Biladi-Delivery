@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
         return;
       }
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE || "http://localhost:4000"}/api/profile`, {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const register = async (name, email, password) => {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE || "http://localhost:4000"}/api/register`, {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE || "http://localhost:4000"}/api/login`, {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),

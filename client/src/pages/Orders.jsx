@@ -7,7 +7,7 @@ export default function Orders({ onNavigate }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch(`${import.meta.env.VITE_API_BASE || "http://localhost:4000"}/api/orders/mine`, {
+    fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/orders/mine`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())

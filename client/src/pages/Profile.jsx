@@ -17,7 +17,7 @@ export default function Profile({ onNavigate }) {
     }
     async function load() {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE || "http://localhost:4000"}/api/profile`, {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Profil laden fehlgeschlagen");
@@ -60,7 +60,7 @@ export default function Profile({ onNavigate }) {
     setSuccess("");
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE || "http://localhost:4000"}/api/profile/addresses`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/profile/addresses`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -7,7 +7,7 @@ import homeIcon from "/public/home.png";
 import clockIcon from "/public/clock.png";
 import chatIcon from "/public/chat.png";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000";
 
 export default function CheckoutPayment({ onNavigate }) {
   const { user } = useAuth();

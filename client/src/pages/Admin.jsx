@@ -4,18 +4,42 @@ import { useAuth } from "./AuthContext";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000";
 
 export default function Admin({ onNavigate }) {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const token = localStorage.getItem("token");
 
+  // Refresh profile on mount to ensure we have the latest role
+  useEffect(() => {
+    if (token && refreshProfile) {
+      refreshProfile();
+    }
+  }, [token, refreshProfile]);
+
   const canAccess = useMemo(() => {
-    // Check both AuthContext user and token for admin role
-    if (user?.role === "admin") return true;
-    try {
-      const payload = JSON.parse(atob((token || "").split(".")[1] || "e30="));
-      return payload?.role === "admin";
-    } catch {
+    if (!token) {
+      console.log("❌ No token found");
       return false;
     }
+    
+    // Check AuthContext user first
+    if (user?.role === "admin") {
+      console.log("✅ Admin access granted via user.role");
+      return true;
+    }
+    
+    // Check JWT token payload
+    try {
+      const payload = JSON.parse(atob((token || "").split(".")[1] || "e30="));
+      if (payload?.role === "admin") {
+        console.log("✅ Admin access granted via token payload");
+        return true;
+      }
+      console.log("❌ Admin access denied. User role:", user?.role, "Token role:", payload?.role);
+      console.log("💡 Tip: If you just updated your role to admin, please log out and log back in to get a fresh token.");
+    } catch (err) {
+      console.error("❌ Error parsing token:", err);
+    }
+    
+    return false;
   }, [token, user]);
 
   const [activeTab, setActiveTab] = useState("orders");
@@ -207,15 +231,39 @@ export default function Admin({ onNavigate }) {
   if (!canAccess) {
     return (
       <div className="min-h-screen bg-amber-200 flex items-center justify-center px-4">
-        <div className="bg-white p-6 rounded-xl shadow text-center max-w-sm w-full">
-          <div className="font-semibold mb-2">Kein Zugriff</div>
-          <div className="text-sm text-gray-600">Nur für Administratoren.</div>
-          <button
-            className="mt-4 text-blue-600 underline"
-            onClick={() => onNavigate("Home")}
-          >
-            Zur Startseite
-          </button>
+        <div className="bg-white p-6 rounded-xl shadow text-center max-w-md w-full">
+          <div className="font-semibold mb-2 text-lg">Kein Zugriff</div>
+          <div className="text-sm text-gray-600 mb-4">
+            Nur für Administratoren. 
+            {user && (
+              <div className="mt-2 text-xs text-gray-500">
+                Aktueller Status: {user.role || "unbekannt"}
+              </div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <button
+              className="block w-full px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+              onClick={() => {
+                if (refreshProfile) {
+                  refreshProfile().then(() => {
+                    console.log("Profile refreshed, please try again");
+                  });
+                }
+              }}
+            >
+              Profil aktualisieren
+            </button>
+            <button
+              className="block w-full px-4 py-2 text-blue-600 underline text-sm"
+              onClick={() => onNavigate("Home")}
+            >
+              Zur Startseite
+            </button>
+          </div>
+          <div className="mt-4 text-xs text-gray-500">
+            💡 Tipp: Falls Sie gerade Admin-Rechte erhalten haben, loggen Sie sich aus und wieder ein, um ein neues Token zu erhalten.
+          </div>
         </div>
       </div>
     );

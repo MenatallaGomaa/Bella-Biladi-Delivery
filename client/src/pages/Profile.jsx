@@ -101,46 +101,38 @@ export default function Profile({ onNavigate }) {
   }
 
   return (
-    <div className="min-h-screen bg-amber-200 py-8 px-4 flex justify-center">
-      <div className="w-full max-w-3xl bg-white rounded-2xl shadow p-6">
-        <h1 className="text-2xl font-bold mb-4">Mein Profil</h1>
+    <div className="bg-amber-200 py-4 px-4 flex justify-center items-start">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-4">
+        <h1 className="text-lg sm:text-xl font-bold mb-3">Mein Profil</h1>
         {error && (
-          <div className="mb-4 bg-red-100 border border-red-300 text-red-700 text-sm px-3 py-2 rounded">
+          <div className="mb-3 bg-red-100 border border-red-300 text-red-700 text-xs sm:text-sm px-3 py-2 rounded">
             {error}
           </div>
         )}
         {success && (
-          <div className="mb-4 bg-green-100 border border-green-300 text-green-700 text-sm px-3 py-2 rounded">
+          <div className="mb-3 bg-green-100 border border-green-300 text-green-700 text-xs sm:text-sm px-3 py-2 rounded">
             {success}
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="space-y-2 mb-4 pb-3 border-b border-gray-200">
           <div>
-            <div className="text-sm text-gray-500">Name</div>
-            <div className="font-medium">{profile.name}</div>
+            <div className="text-xs text-gray-500 mb-0.5">Name</div>
+            <div className="font-medium text-sm">{profile.name}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-500">E-Mail</div>
-            <div className="font-medium">{profile.email}</div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500">Rolle</div>
-            <div className="font-medium">{profile.role}</div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500">E-Mail bestätigt</div>
-            <div className="font-medium">{profile.emailVerified ? "Ja" : "Nein"}</div>
+            <div className="text-xs text-gray-500 mb-0.5">E-Mail</div>
+            <div className="font-medium text-sm break-words">{profile.email}</div>
           </div>
         </div>
 
-        <h2 className="text-xl font-semibold mb-2">Adressen</h2>
-        <div className="space-y-4">
+        <h2 className="text-base font-semibold mb-2">Adressen</h2>
+        <div className="space-y-2">
           {addresses.map((addr, idx) => (
-            <div key={idx} className="border rounded-lg p-4 bg-gray-50">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div key={idx} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+              <div className="space-y-2">
                 <input
-                  className="border rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   placeholder="Bezeichnung (z.B. Zuhause)"
                   value={addr.label || ""}
                   onChange={(e) => {
@@ -150,7 +142,7 @@ export default function Profile({ onNavigate }) {
                   }}
                 />
                 <input
-                  className="border rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   placeholder="Name"
                   value={addr.name || ""}
                   onChange={(e) => {
@@ -160,7 +152,7 @@ export default function Profile({ onNavigate }) {
                   }}
                 />
                 <input
-                  className="border rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   placeholder="Telefon"
                   value={addr.phone || ""}
                   onChange={(e) => {
@@ -170,7 +162,7 @@ export default function Profile({ onNavigate }) {
                   }}
                 />
                 <input
-                  className="border rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   placeholder="Straße Hausnummer"
                   value={addr.street || ""}
                   onChange={(e) => {
@@ -180,7 +172,7 @@ export default function Profile({ onNavigate }) {
                   }}
                 />
                 <input
-                  className="border rounded px-3 py-2 text-sm sm:col-span-2"
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   placeholder="PLZ Ort"
                   value={addr.postalCity || ""}
                   onChange={(e) => {
@@ -190,9 +182,9 @@ export default function Profile({ onNavigate }) {
                   }}
                 />
               </div>
-              <div className="mt-3 text-right">
+              <div className="mt-2 text-right">
                 <button
-                  className="text-red-600 text-sm hover:underline"
+                  className="text-red-600 text-xs hover:underline"
                   onClick={() => handleRemoveAddress(idx)}
                 >
                   Entfernen
@@ -202,17 +194,17 @@ export default function Profile({ onNavigate }) {
           ))}
         </div>
 
-        <div className="mt-4 flex gap-2">
+        <div className="mt-3 flex flex-col gap-2">
           <button
             onClick={handleAddAddress}
-            className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+            className="w-full px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
           >
             Adresse hinzufügen
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 rounded bg-amber-400 hover:bg-amber-500 disabled:opacity-50"
+            className="w-full px-3 py-2 text-sm rounded-lg bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
             {saving ? "Speichern…" : "Speichern"}
           </button>

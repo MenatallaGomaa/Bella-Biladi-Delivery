@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import nodemailer from "nodemailer";
 
@@ -32,7 +33,9 @@ async function getTransporter() {
 }
 
 function signToken(user) {
-  return jwt.sign({ sub: user._id, role: user.role }, JWT_SECRET, {
+  // Ensure _id is always a string for consistent JWT storage
+  const userId = user._id ? user._id.toString() : user._id;
+  return jwt.sign({ sub: userId, role: user.role || "user" }, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   });
 }
@@ -70,7 +73,8 @@ router.post("/register", async (req, res) => {
       emailVerificationExpires,
     });
 
-    const token = signToken(user);
+    // Ensure _id is converted to string for JWT token
+    const token = signToken({ _id: user._id.toString(), role: user.role || "user" });
 
     try {
       const t = await getTransporter();
@@ -130,10 +134,16 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const token = signToken(user);
+    // Ensure role is set (default to "user" if not set)
+    const userRole = user.role || "user";
+    console.log(`✅ Login successful for ${trimmedEmail}, role: ${userRole}`);
+    console.log(`   User ID: ${user._id} (type: ${typeof user._id}, string: ${user._id.toString()})`);
+    
+    // Ensure _id is converted to string for JWT token
+    const token = signToken({ _id: user._id.toString(), role: userRole });
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, emailVerified: user.emailVerified },
+      user: { id: user._id.toString(), name: user.name, email: user.email, role: userRole, emailVerified: user.emailVerified || false },
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -148,12 +158,63 @@ router.get("/profile", async (req, res) => {
   if (!token) return res.status(401).json({ error: "Missing token" });
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(payload.sub).lean();
-    if (!user) return res.status(404).json({ error: "User not found" });
+    console.log("Profile request - Token payload:", { sub: payload.sub, role: payload.role, subType: typeof payload.sub });
+    
+    // Try to find user by ID - Mongoose should handle string/ObjectId conversion
+    let user = null;
+    
+    // Try multiple ways to find the user
+    if (payload.sub) {
+      // First try: Direct findById (Mongoose handles string/ObjectId conversion)
+      user = await User.findById(payload.sub).lean();
+      
+      // Second try: If not found, try with ObjectId conversion
+      if (!user && mongoose.Types.ObjectId.isValid(payload.sub)) {
+        console.log(`   Trying to find user with ObjectId conversion: ${payload.sub}`);
+        try {
+          const objectId = new mongoose.Types.ObjectId(payload.sub);
+          user = await User.findById(objectId).lean();
+        } catch (err) {
+          console.log(`   ObjectId conversion failed: ${err.message}`);
+        }
+      }
+      
+      // Third try: Try as string
+      if (!user) {
+        console.log(`   Trying to find user with ID as string: ${payload.sub}`);
+        user = await User.findOne({ _id: payload.sub.toString() }).lean();
+      }
+    }
+    
+    // If still not found, log details and return error
+    if (!user) {
+      console.error(`❌ User not found in database. User ID from token: ${payload.sub} (type: ${typeof payload.sub})`);
+      // Check if user exists with different ID format
+      const allUsers = await User.find({}).select("_id email name").limit(10).lean();
+      console.log(`Available users in database (${allUsers.length}):`, allUsers.map(u => ({ 
+        id: u._id.toString(), 
+        idType: typeof u._id,
+        email: u.email,
+        name: u.name 
+      })));
+      
+      return res.status(404).json({ error: "User not found. Please log in again." });
+    }
+    
     const { passwordHash, ...safe } = user;
+    // Ensure role is always included (default to "user" if not set)
+    if (!safe.role) {
+      safe.role = "user";
+    }
+    console.log("✅ Profile request successful for user:", safe.email, "Role:", safe.role);
     res.json(safe);
   } catch (err) {
-    return res.status(401).json({ error: "Invalid token" });
+    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+      console.error("Profile error - Invalid/expired token:", err.message);
+      return res.status(401).json({ error: "Invalid or expired token. Please log in again." });
+    }
+    console.error("Profile error:", err.message, err.stack);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

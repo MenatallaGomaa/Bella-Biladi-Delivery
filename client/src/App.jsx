@@ -17,6 +17,7 @@ import "./index.css";
 function MainApp() {
   const [items, setItems] = useState([]);
   const [active, setActive] = useState("Beliebt");
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [page, setPage] = useState(() => {
     const saved = localStorage.getItem("currentPage");
     if (saved) return saved;
@@ -65,6 +66,40 @@ function MainApp() {
       .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
   }, []);
 
+  // 📜 Show/hide scroll to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY || document.documentElement.scrollTop;
+      setShowScrollTop(scrollPosition > 300); // Show after scrolling 300px
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // ⬆️ Scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+
+  // 🗂️ Category mapping: database category -> UI category name
+  const categoryMap = useMemo(() => {
+    return {
+      "Popular": "Beliebt",
+      "Pizza rolls": "Pizzabrötchen",
+      "Baked Pasta": "Pasta Überbacken",
+      "French fries": "Pommes Frites",
+      "drinks": "Getränke",
+      "Desserts": "Desserts",
+      "Pizza": "Pizza",
+      "Spaghetti": "Spaghetti",
+      "Burger": "Burger",
+    };
+  }, []);
+
   // 🗂️ Build categories
   const categories = useMemo(() => {
     const defaults = [
@@ -78,25 +113,42 @@ function MainApp() {
       "Getränke",
       "Desserts",
     ];
-    const dynamic = items.map((i) => i.category || "Pizza");
+    // Get unique categories from items, mapped to UI names
+    const dynamic = items.map((i) => {
+      const dbCategory = i.category || "Pizza";
+      return categoryMap[dbCategory] || dbCategory;
+    });
     return [...new Set([...defaults, ...dynamic])];
-  }, [items]);
+  }, [items, categoryMap]);
 
   const grouped = useMemo(() => {
     const m = new Map();
     items.forEach((i) => {
-      const k = i.category || "Pizza";
-      if (!m.has(k)) m.set(k, []);
-      m.get(k).push(i);
+      const dbCategory = i.category || "Pizza";
+      // Map database category to UI category name
+      const uiCategory = categoryMap[dbCategory] || dbCategory;
+      if (!m.has(uiCategory)) m.set(uiCategory, []);
+      m.get(uiCategory).push(i);
     });
     return m;
-  }, [items]);
+  }, [items, categoryMap]);
 
   // 📜 Smooth scroll when switching tabs
   useEffect(() => {
-    if (sectionRefs.current[active]) {
-      sectionRefs.current[active].scrollIntoView({ behavior: "smooth" });
-    }
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const section = sectionRefs.current[active];
+      if (section) {
+        const elementPosition = section.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - 100; // 100px offset for navbar
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth"
+        });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
   }, [active]);
 
   // 🎨 UI visibility logic
@@ -182,40 +234,21 @@ function MainApp() {
                 onPick={setActive}
               />
 
-              {/* Featured */}
-              {grouped.get("Beliebt") && (
-                <Section
-                  key="Beliebt"
-                  title="Beliebt"
-                  items={grouped.get("Beliebt")}
-                  ref={(el) => (sectionRefs.current["Beliebt"] = el)}
-                  onAddToCart={addToCart}
-                />
-              )}
-
-              {/* Pizza */}
-              {grouped.get("Pizza") && (
-                <Section
-                  key="Pizza"
-                  title="Pizza"
-                  items={grouped.get("Pizza")}
-                  ref={(el) => (sectionRefs.current["Pizza"] = el)}
-                  onAddToCart={addToCart}
-                />
-              )}
-
-              {/* Other categories */}
-              {[...grouped.entries()]
-                .filter(([cat]) => cat !== "Beliebt" && cat !== "Pizza")
-                .map(([cat, list]) => (
+              {/* Render all categories in order */}
+              {categories.map((cat) => {
+                const items = grouped.get(cat) || [];
+                if (items.length === 0) return null;
+                
+                return (
                   <Section
                     key={cat}
                     title={cat}
-                    items={list}
+                    items={cat === "Beliebt" ? items.slice(0, 5) : items}
                     ref={(el) => (sectionRefs.current[cat] = el)}
                     onAddToCart={addToCart}
                   />
-                ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -271,6 +304,30 @@ function MainApp() {
             </div>
           </div>
         </footer>
+      )}
+
+      {/* ⬆️ Scroll to Top Button - Only show on Home page */}
+      {showScrollTop && page === "Home" && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-50 bg-amber-400 hover:bg-amber-500 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 active:scale-95 group"
+          aria-label="Scroll to top"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 transition-transform duration-300 group-hover:-translate-y-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 15l7-7 7 7"
+            />
+          </svg>
+        </button>
       )}
     </div>
   );

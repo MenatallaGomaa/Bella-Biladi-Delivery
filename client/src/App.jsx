@@ -161,6 +161,7 @@ function MainApp() {
     page === "Checkout" ||
     page === "CheckoutLogin" ||
     page === "CheckoutRegister" ||
+    page === "CheckoutPayment" ||
     page === "Cart";
 
   // 🧭 Universal navigation handler

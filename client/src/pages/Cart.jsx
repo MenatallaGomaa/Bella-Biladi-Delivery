@@ -57,19 +57,20 @@ export default function Cart({ onNavigate }) {
   return (
     <div
       className="
-        bg-amber-200 
-        flex justify-center items-center 
-        min-h-screen 
-        px-4 py-6 
-        overflow-hidden
+        bg-amber-200
+        min-h-screen
+        px-4 py-6
+        md:py-12
+        flex justify-center
+        items-start md:items-center
       "
     >
       <div
         className="
           bg-white 
           w-full 
-          max-w-3xl 
-          rounded-lg 
+          max-w-3xl
+          rounded-2xl
           shadow-md 
           p-6 sm:p-8 
           flex flex-col 

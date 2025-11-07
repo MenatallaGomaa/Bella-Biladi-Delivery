@@ -20,14 +20,17 @@ const Section = forwardRef(({ title, items, onAddToCart }, ref) => {
 
       {title === "Beliebt" ? (
         <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2">
-          {items.map((item, index) => (
-            <ProductCard
-              key={item._id}
-              item={item}
-              compact
-              onAddToCart={onAddToCart}
-            />
-          ))}
+          {items.map((item, index) => {
+            const cleanedName = item.name?.replace(/^Beliebte\s+/i, "") || item.name;
+            return (
+              <ProductCard
+                key={item._id}
+                item={{ ...item, name: cleanedName }}
+                compact
+                onAddToCart={onAddToCart}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">

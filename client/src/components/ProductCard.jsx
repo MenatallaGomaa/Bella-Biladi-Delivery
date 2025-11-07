@@ -330,7 +330,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       <>
         <div
           ref={ref}
-          className={`relative min-w-[180px] bg-white shadow rounded-lg p-3 snap-center transition-all duration-500 ease-out ${
+          className={`relative min-w-[180px] bg-white shadow rounded-lg p-3 pb-2 snap-center transition-all duration-500 ease-out ${
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4"
@@ -344,7 +344,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
             onError={handleImageError}
           />
           <div className="mt-2 font-medium">{item.name}</div>
-          <div className="mt-1 font-semibold">{euro(item.priceCents)}</div>
+          <div className="mt-1 font-semibold mb-1">{euro(item.priceCents)}</div>
           <button
             onClick={handleAddClick}
             className={`absolute top-2 right-2 bg-white rounded-full p-1 shadow transition-colors ${

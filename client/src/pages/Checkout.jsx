@@ -58,7 +58,7 @@ export default function Checkout({ onNavigate, initialMode = "login" }) {
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-amber-300 via-orange-300 to-amber-500 text-white relative">
       {/* 🔙 Back button */}
       <button
-        onClick={() => onNavigate("Cart")}
+        onClick={() => onNavigate("Home")}
         className="absolute top-6 left-6 text-white bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg backdrop-blur-sm text-sm font-medium"
       >
         ← Zurück

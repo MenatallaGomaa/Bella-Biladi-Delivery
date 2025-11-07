@@ -4,8 +4,13 @@ import { useCart } from "../pages/CartContext";
 import { useScrollAnimation } from "../hooks/useScrollAnimation";
 
 const DIP_OPTIONS = [
+  { id: "vegane-mayo", label: "Mit veganer Mayo" },
+  { id: "bbq", label: "Mit BBQ-Dip" },
   { id: "knoblauch", label: "Mit Knoblauch-Dip" },
   { id: "kraeuter", label: "Mit Kräuter-Dip" },
+  { id: "sweet-chili", label: "Mit Sweet-Chili-Dip" },
+  { id: "ketchup", label: "Mit Ketchup" },
+  { id: "mayonnaise", label: "Mit Mayonnaise" },
   { id: "ohne", label: "Ohne Dip" },
 ];
 

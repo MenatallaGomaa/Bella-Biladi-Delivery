@@ -60,9 +60,9 @@ export default function Cart({ onNavigate }) {
         bg-amber-200
         min-h-screen
         px-4 py-6
-        md:py-12
+        md:px-8 md:py-12
         flex justify-center
-        items-start md:items-center
+        items-start
       "
     >
       <div
@@ -72,11 +72,11 @@ export default function Cart({ onNavigate }) {
           max-w-3xl
           rounded-2xl
           shadow-md 
-          p-6 sm:p-8 
-          flex flex-col 
-          justify-between
+          p-6 sm:p-8
+          flex flex-col
           min-h-[450px] sm:min-h-[520px]
           transition-all duration-300
+          md:mb-8
         "
       >
         <div className="flex items-center justify-between mb-4 sm:mb-6">
@@ -209,13 +209,13 @@ export default function Cart({ onNavigate }) {
 
         {/* Checkout row */}
         {grouped.length > 0 && (
-          <div className="mt-6 flex justify-between items-center border-t pt-4">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-t pt-4">
             <div className="text-lg font-semibold">
               Zur Kasse {total.toFixed(2)} €
             </div>
             <button
               onClick={handleCheckout} // uses logic above
-              className="bg-amber-400 px-6 py-2 rounded-lg font-semibold hover:bg-amber-500"
+              className="bg-amber-400 px-6 py-2 rounded-lg font-semibold hover:bg-amber-500 w-full sm:w-auto"
             >
               Zur Kasse
             </button>

@@ -78,9 +78,18 @@ export default function Cart({ onNavigate }) {
           transition-all duration-300
         "
       >
-        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">
-          Warenkorb
-        </h2>
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <button
+            onClick={() => onNavigate("Home")}
+            className="flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700"
+          >
+            ← Zurück
+          </button>
+          <h2 className="text-2xl sm:text-3xl font-bold text-center flex-1">
+            Warenkorb
+          </h2>
+          <div className="w-16" aria-hidden="true"></div>
+        </div>
 
         {/* Delivery / Pickup toggle */}
         <div className="flex justify-center gap-2 mb-6">

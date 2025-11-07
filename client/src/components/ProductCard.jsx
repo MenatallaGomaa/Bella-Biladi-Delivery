@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { euro } from "../api";
 import { useCart } from "../pages/CartContext";
 import { useScrollAnimation } from "../hooks/useScrollAnimation";
@@ -42,7 +42,7 @@ const EXTRA_OPTIONS = [
 ];
 
 export function ProductCard({ item, compact = false, delay = 0 }) {
-  const { addToCart } = useCart();
+  const { addToCart, lastAdded } = useCart();
   const [ref, isVisible] = useScrollAnimation({ threshold: 0.1 });
   const [imageError, setImageError] = useState(false);
   const imageSrc = imageError || !item.imageUrl ? "/main.jpeg" : item.imageUrl;
@@ -50,6 +50,21 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
   const [selectedDip, setSelectedDip] = useState(DIP_OPTIONS[0].id);
   const [selectedCheese, setSelectedCheese] = useState(CHEESE_OPTIONS[0].id);
   const [selectedExtras, setSelectedExtras] = useState(new Set());
+  const [quantity, setQuantity] = useState(1);
+  const [highlighted, setHighlighted] = useState(false);
+  const [buttonPulse, setButtonPulse] = useState(false);
+
+  const baseId = useMemo(
+    () => item._id || item.id || item.name,
+    [item._id, item.id, item.name]
+  );
+
+  useEffect(() => {
+    if (lastAdded && lastAdded.baseItemId === baseId) {
+      setHighlighted(true);
+      setTimeout(() => setHighlighted(false), 3000);
+    }
+  }, [lastAdded, baseId]);
 
   const handleImageError = () => {
     setImageError(true);
@@ -79,13 +94,14 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     setSelectedDip(DIP_OPTIONS[0].id);
     setSelectedCheese(CHEESE_OPTIONS[0].id);
     setSelectedExtras(new Set());
+    setQuantity(1);
   };
 
   const handleAddClick = () => {
     if (isPizza || isPizzaRoll) {
       setIsModalOpen(true);
     } else {
-      addToCart({ ...item });
+      addToCart({ ...item, baseItemId: baseId });
     }
   };
 
@@ -140,12 +156,28 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       description: item.description,
       priceCents: item.priceCents + extrasPrice,
       customizations,
+      baseItemId: baseId,
     };
 
-    addToCart(customItem);
+    for (let i = 0; i < quantity; i++) {
+      addToCart(customItem);
+    }
     setIsModalOpen(false);
     resetCustomization();
   };
+
+  useEffect(() => {
+    if (lastAdded && lastAdded.id === baseId) {
+      setHighlighted(true);
+      setButtonPulse(true);
+      const highlightTimer = setTimeout(() => setHighlighted(false), 600);
+      const pulseTimer = setTimeout(() => setButtonPulse(false), 600);
+      return () => {
+        clearTimeout(highlightTimer);
+        clearTimeout(pulseTimer);
+      };
+    }
+  }, [lastAdded, baseId]);
 
   const renderModal = () => {
     if (!isModalOpen) return null;
@@ -258,16 +290,24 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
             )}
           </div>
 
-          <div className="mt-6 flex items-center justify-between">
-            <button
-              onClick={() => {
-                setIsModalOpen(false);
-                resetCustomization();
-              }}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              Abbrechen
-            </button>
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 rounded-full bg-amber-50 px-3 py-2 text-sm font-medium text-gray-700">
+              <button
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="h-7 w-7 rounded-full bg-white text-lg leading-none shadow hover:bg-amber-100"
+                aria-label="Weniger"
+              >
+                −
+              </button>
+              <span className="w-6 text-center">{quantity}</span>
+              <button
+                onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+                className="h-7 w-7 rounded-full bg-white text-lg leading-none shadow hover:bg-amber-100"
+                aria-label="Mehr"
+              >
+                +
+              </button>
+            </div>
             <button
               onClick={handleConfirm}
               className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black shadow hover:bg-amber-500"
@@ -289,7 +329,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4"
-          }`}
+          } ${highlighted ? "ring-2 ring-amber-400 shadow-lg" : ""}`}
           style={{ transitionDelay: `${delay}ms` }}
         >
           <img
@@ -302,7 +342,9 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           <div className="mt-1 font-semibold">{euro(item.priceCents)}</div>
           <button
             onClick={handleAddClick}
-            className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-amber-200 transition-colors"
+            className={`absolute top-2 right-2 bg-white rounded-full p-1 shadow transition-colors ${
+              buttonPulse ? "bg-amber-200 animate-pulse" : "hover:bg-amber-200"
+            }`}
           >
             <img src="/plus.png" alt="add" className="w-5 h-5" />
           </button>
@@ -320,7 +362,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           isVisible
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-6"
-        }`}
+        } ${highlighted ? "ring-2 ring-amber-400 shadow-lg" : ""}`}
         style={{ transitionDelay: `${delay}ms` }}
       >
         <div className="flex-1">
@@ -340,7 +382,9 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
         />
         <button
           onClick={handleAddClick}
-          className="absolute top-3 right-3 bg-white rounded-full p-1.5 shadow hover:bg-amber-200 transition-colors"
+          className={`absolute top-3 right-3 bg-white rounded-full p-1.5 shadow transition-colors ${
+            buttonPulse ? "bg-amber-200 animate-pulse" : "hover:bg-amber-200"
+          }`}
         >
           <img src="/plus.png" alt="add" className="w-5 h-5" />
         </button>

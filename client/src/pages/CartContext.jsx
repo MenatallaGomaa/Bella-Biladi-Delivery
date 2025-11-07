@@ -12,6 +12,7 @@ export function CartProvider({ children }) {
 
   const [cart, setCart] = useState([]);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [lastAdded, setLastAdded] = useState(null);
 
   useEffect(() => {
     setIsHydrated(false);
@@ -44,6 +45,8 @@ export function CartProvider({ children }) {
   // ✅ Add item (adds one instance)
   function addToCart(item) {
     setCart((prev) => [...prev, item]);
+    const baseId = item.baseItemId || item._id || item.id || item.name;
+    setLastAdded({ id: baseId, at: Date.now() });
   }
 
   // ✅ Remove ONE instance by name (removes from the end to preserve order)
@@ -75,7 +78,14 @@ export function CartProvider({ children }) {
   function clearCart() {
     setCart([]);
     localStorage.removeItem(storageKey);
+    setLastAdded(null);
   }
+
+  useEffect(() => {
+    if (!lastAdded) return;
+    const timeout = setTimeout(() => setLastAdded(null), 1200);
+    return () => clearTimeout(timeout);
+  }, [lastAdded]);
 
   return (
     <CartContext.Provider
@@ -86,6 +96,7 @@ export function CartProvider({ children }) {
         removeAllFromCart,
         clearCart,
         setCart,
+        lastAdded,
       }}
     >
       {children}

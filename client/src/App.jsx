@@ -12,6 +12,8 @@ import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import "./index.css";
 
 function MainApp() {
@@ -33,6 +35,8 @@ function MainApp() {
       orders: "Orders",
       profile: "Profile",
       admin: "Admin",
+      "forgot-password": "ForgotPassword",
+      "reset-password": "ResetPassword",
     };
     return map[path] || "Home";
   });
@@ -53,6 +57,13 @@ function MainApp() {
       Orders: "/orders",
       Profile: "/profile",
       Admin: "/admin",
+      ForgotPassword: "/forgot-password",
+      ResetPassword: (() => {
+        const search = window.location.search;
+        return search && search.includes("token=")
+          ? `/reset-password${search}`
+          : "/reset-password";
+      })(),
     };
     const path = map[page] || "/home";
     window.history.pushState({}, "", path);
@@ -155,14 +166,18 @@ function MainApp() {
   const hideNav =
     page === "Checkout" ||
     page === "CheckoutLogin" ||
-    page === "CheckoutRegister";
+    page === "CheckoutRegister" ||
+    page === "ForgotPassword" ||
+    page === "ResetPassword";
 
   const hideFooter =
     page === "Checkout" ||
     page === "CheckoutLogin" ||
     page === "CheckoutRegister" ||
     page === "CheckoutPayment" ||
-    page === "Cart";
+    page === "Cart" ||
+    page === "ForgotPassword" ||
+    page === "ResetPassword";
 
   // 🧭 Universal navigation handler
   const handleNavigate = (newPage) => {
@@ -228,6 +243,14 @@ function MainApp() {
             : ""
         }`}
       >
+        {page === "ForgotPassword" && (
+          <ForgotPassword onNavigate={handleNavigate} />
+        )}
+
+        {page === "ResetPassword" && (
+          <ResetPassword onNavigate={handleNavigate} />
+        )}
+
         {/* 🏠 HOME */}
         {page === "Home" && (
           <div className="bg-amber-200">

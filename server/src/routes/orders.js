@@ -4,6 +4,7 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import Order from "../models/Order.js";
 import Item from "../models/Item.js";
+import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { requireAdmin } from "../middleware/auth.js";
 
@@ -60,6 +61,26 @@ r.post("/", async (req, res) => {
 
     if (!items?.length) {
       return res.status(400).json({ error: "No items provided" });
+    }
+
+    const auth = req.headers.authorization || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+    if (!token) {
+      return res.status(401).json({ error: "Bitte melde dich an, um eine Bestellung aufzugeben." });
+    }
+
+    let user;
+    try {
+      const payload = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "dev_secret_change_me"
+      );
+      user = await User.findById(payload.sub);
+      if (!user) {
+        return res.status(401).json({ error: "Bitte melde dich an, um eine Bestellung aufzugeben." });
+      }
+    } catch (err) {
+      return res.status(401).json({ error: "Bitte melde dich an, um eine Bestellung aufzugeben." });
     }
 
     // Get item data from DB
@@ -119,46 +140,33 @@ r.post("/", async (req, res) => {
     const total = Math.round(subtotal); // Add delivery fee if needed later
     const ref = `BB-${new Date().getFullYear()}-${nano()}`;
 
-    // Save order to DB
-    // optional user association via Bearer token
-    let userId;
-    try {
-      const auth = req.headers.authorization || "";
-      const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-      if (token) {
-        const payload = jwt.verify(
-          token,
-          process.env.JWT_SECRET || "dev_secret_change_me"
-        );
-        userId = payload.sub;
-      }
-    } catch {}
+    const customerInfo = {
+      name: (customer?.name || user.name || "").toString().trim(),
+      phone: (customer?.phone || "").toString().trim(),
+      address: (customer?.address || "").toString().trim(),
+      email: user.email,
+      desiredTime: customer?.desiredTime || "So schnell wie möglich",
+      notes: notes || customer?.notes || "",
+    };
 
     const order = await Order.create({
       ref,
-      userId: userId || undefined,
+      userId: user._id,
       items: cart,
       totals: {
         subtotalCents: Math.round(subtotal),
         deliveryFeeCents: 0,
         grandTotalCents: Math.round(total),
       },
-      customer: { 
-        name: customer?.name || "",
-        phone: customer?.phone || "",
-        address: customer?.address || "",
-        email: customer?.email || "",
-        desiredTime: customer?.desiredTime || "So schnell wie möglich",
-        notes: notes || customer?.notes || "",
-      },
+      customer: customerInfo,
       method: "cash_on_delivery",
     });
 
     // ✅ Send confirmation email
-    if (customer?.email && transporter) {
-      const desiredTime = customer?.desiredTime || "So schnell wie möglich";
-      const commentBlock = customer?.notes
-        ? `<p style="margin: 15px 0; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><b>📝 Ihre Notiz:</b> ${customer.notes}</p>`
+    if (customerInfo.email && transporter) {
+      const desiredTime = customerInfo.desiredTime || "So schnell wie möglich";
+      const commentBlock = customerInfo?.notes
+        ? `<p style="margin: 15px 0; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><b>📝 Ihre Notiz:</b> ${customerInfo.notes}</p>`
         : "";
 
       // Calculate estimated delivery time
@@ -214,7 +222,7 @@ r.post("/", async (req, res) => {
 
           <!-- Content -->
           <div style="padding:30px;background-color:#ffffff;">
-            <h2 style="color:#1f2937;margin-top:0;font-size:24px;">Hallo ${customer.name || "Kunde"} 👋</h2>
+            <h2 style="color:#1f2937;margin-top:0;font-size:24px;">Hallo ${customerInfo.name || user.name || "Kunde"} 👋</h2>
             <p style="color:#4b5563;font-size:16px;line-height:1.6;">Vielen Dank für Ihre Bestellung bei <b style="color:#f59e0b;">BellaBiladi</b>! Wir freuen uns, Ihnen köstliches Essen zu liefern.</p>
 
             <!-- Order Details Box -->
@@ -278,11 +286,11 @@ r.post("/", async (req, res) => {
             </div>
 
             <!-- Delivery Address -->
-            ${customer?.address ? `
+            ${customerInfo?.address ? `
               <div style="margin-top:25px;padding:15px;background-color:#f9fafb;border-radius:8px;">
                 <p style="margin:0 0 10px 0;color:#6b7280;font-size:14px;font-weight:600;">📍 Lieferadresse:</p>
-                <p style="margin:0;color:#1f2937;font-size:16px;line-height:1.6;">${customer.address}</p>
-                ${customer?.phone ? `<p style="margin:10px 0 0 0;color:#1f2937;font-size:16px;">📞 ${customer.phone}</p>` : ""}
+                <p style="margin:0;color:#1f2937;font-size:16px;line-height:1.6;">${customerInfo.address}</p>
+                ${customerInfo?.phone ? `<p style="margin:10px 0 0 0;color:#1f2937;font-size:16px;">📞 ${customerInfo.phone}</p>` : ""}
               </div>
             ` : ""}
 
@@ -315,7 +323,7 @@ r.post("/", async (req, res) => {
         from: `"BellaBiladi 🍕" <${
           process.env.EMAIL_USER || "no-reply@bellabiladi.de"
         }>`,
-        to: customer.email,
+        to: customerInfo.email,
         subject: "🍕 Ihre BellaBiladi Bestellbestätigung",
         html,
       };
@@ -328,7 +336,7 @@ r.post("/", async (req, res) => {
             nodemailer.getTestMessageUrl(info)
           );
         } else {
-          console.log(`✅ Email sent to ${customer.email}`);
+          console.log(`✅ Email sent to ${customerInfo.email}`);
         }
       } catch (err) {
         console.error("❌ Email send failed:", err.message);

@@ -46,8 +46,10 @@ export function AuthProvider({ children }) {
     loadProfile();
   }, []);
 
+  const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000";
+
   const register = async (name, email, password) => {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/register`, {
+    const res = await fetch(`${apiBase}/api/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
@@ -60,7 +62,7 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/login`, {
+    const res = await fetch(`${apiBase}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -84,6 +86,50 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("token");
+  };
+
+  const requestPasswordReset = async (email) => {
+    const res = await fetch(`${apiBase}/api/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Zurücksetzen konnte nicht gestartet werden");
+    }
+    return true;
+  };
+
+  const resetPassword = async (token, password) => {
+    const res = await fetch(`${apiBase}/api/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Passwort konnte nicht zurückgesetzt werden");
+    }
+    return true;
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("Bitte melde dich erneut an");
+    const res = await fetch(`${apiBase}/api/change-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Passwort konnte nicht geändert werden");
+    }
+    return true;
   };
 
   // Function to refresh user profile (useful after role changes)
@@ -113,7 +159,17 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading, refreshProfile }}>
+    <AuthContext.Provider value={{
+      user,
+      login,
+      register,
+      logout,
+      loading,
+      refreshProfile,
+      requestPasswordReset,
+      resetPassword,
+      changePassword,
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -45,7 +45,7 @@ function getAvailableTimeSlots(day) {
 }
 
 export default function CheckoutPayment({ onNavigate }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { cart, addToCart, removeOneFromCart, removeAllFromCart, clearCart, setCart } =
     useCart();
 
@@ -131,6 +131,13 @@ export default function CheckoutPayment({ onNavigate }) {
   useEffect(() => {
     document.body.style.overflow = editing || showItems ? "hidden" : "auto";
   }, [editing, showItems]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      localStorage.setItem("redirectAfterLogin", "CheckoutPayment");
+      onNavigate("CheckoutLogin");
+    }
+  }, [loading, user]);
 
   useEffect(() => {
     return () => {
@@ -246,6 +253,14 @@ export default function CheckoutPayment({ onNavigate }) {
   const handleOrderSubmit = async () => {
     setSubmitError("");
     setConfirmation(null);
+
+    if (!user) {
+      setSubmitError("Bitte melde dich an, um eine Bestellung aufzugeben.");
+      localStorage.setItem("redirectAfterLogin", "CheckoutPayment");
+      onNavigate("CheckoutLogin");
+      return;
+    }
+
     if (!validateForm()) return;
 
     if (!grouped.length) {
@@ -334,6 +349,12 @@ export default function CheckoutPayment({ onNavigate }) {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 401) {
+          setSubmitError("Bitte melde dich erneut an, um die Bestellung abzuschließen.");
+          localStorage.setItem("redirectAfterLogin", "CheckoutPayment");
+          onNavigate("CheckoutLogin");
+          return;
+        }
         // If server says items not found, clean up the cart
         if (data.error && data.error.includes("Some items not found")) {
           // Fetch current items and filter out invalid ones

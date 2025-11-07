@@ -156,6 +156,17 @@ export default function Checkout({ onNavigate, initialMode = "login" }) {
               )}
             </button>
           </div>
+          {isLogin && (
+            <div className="text-right text-xs">
+              <button
+                type="button"
+                onClick={() => onNavigate("ForgotPassword")}
+                className="text-blue-600 underline hover:text-blue-800"
+              >
+                Passwort vergessen?
+              </button>
+            </div>
+          )}
 
           <button
             type="submit"

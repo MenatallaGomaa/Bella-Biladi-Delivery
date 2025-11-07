@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "./AuthContext";
 
 export default function Profile({ onNavigate }) {
-  const { user: authUser } = useAuth();
+  const { user: authUser, changePassword } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -10,6 +10,10 @@ export default function Profile({ onNavigate }) {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const successTimeoutRef = useRef(null);
+  const [passwordForm, setPasswordForm] = useState({ current: "", next: "", confirm: "" });
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -127,6 +131,35 @@ export default function Profile({ onNavigate }) {
       setError(e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (!passwordForm.current.trim() || !passwordForm.next.trim()) {
+      setPasswordError("Bitte fülle alle Felder aus.");
+      return;
+    }
+    if (passwordForm.next.trim().length < 6) {
+      setPasswordError("Das neue Passwort muss mindestens 6 Zeichen lang sein.");
+      return;
+    }
+    if (passwordForm.next.trim() !== passwordForm.confirm.trim()) {
+      setPasswordError("Die neuen Passwörter stimmen nicht überein.");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await changePassword(passwordForm.current.trim(), passwordForm.next.trim());
+      setPasswordSuccess("Passwort erfolgreich geändert!");
+      setPasswordForm({ current: "", next: "", confirm: "" });
+    } catch (err) {
+      setPasswordError(err.message || "Passwort konnte nicht geändert werden.");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -296,6 +329,50 @@ export default function Profile({ onNavigate }) {
           >
             {saving ? "Speichern…" : "Speichern"}
           </button>
+        </div>
+
+        <div className="mt-6 border-t border-gray-200 pt-4">
+          <h2 className="text-base font-semibold mb-3">Passwort ändern</h2>
+          {passwordError && (
+            <div className="mb-3 rounded border border-red-300 bg-red-100 px-3 py-2 text-xs text-red-700">
+              {passwordError}
+            </div>
+          )}
+          {passwordSuccess && (
+            <div className="mb-3 rounded border border-green-300 bg-green-100 px-3 py-2 text-xs text-green-700">
+              {passwordSuccess}
+            </div>
+          )}
+          <div className="space-y-2">
+            <input
+              type="password"
+              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+              placeholder="Aktuelles Passwort"
+              value={passwordForm.current}
+              onChange={(e) => setPasswordForm((prev) => ({ ...prev, current: e.target.value }))}
+            />
+            <input
+              type="password"
+              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+              placeholder="Neues Passwort"
+              value={passwordForm.next}
+              onChange={(e) => setPasswordForm((prev) => ({ ...prev, next: e.target.value }))}
+            />
+            <input
+              type="password"
+              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+              placeholder="Neues Passwort bestätigen"
+              value={passwordForm.confirm}
+              onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirm: e.target.value }))}
+            />
+            <button
+              onClick={handleChangePassword}
+              disabled={changingPassword}
+              className="w-full px-3 py-2 text-sm rounded-lg bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              {changingPassword ? "Ändern…" : "Passwort ändern"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

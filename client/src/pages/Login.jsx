@@ -117,6 +117,15 @@ export default function Login({ onNavigate }) {
               )}
             </button>
           </div>
+          <div className="text-right">
+            <button
+              type="button"
+              onClick={() => onNavigate("ForgotPassword")}
+              className="text-xs text-blue-600 underline hover:text-blue-800"
+            >
+              Passwort vergessen?
+            </button>
+          </div>
           <button
             type="submit"
             className="w-full bg-amber-400 py-2 rounded-lg hover:bg-amber-500 font-semibold transition-colors"

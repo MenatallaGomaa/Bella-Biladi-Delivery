@@ -235,8 +235,11 @@ router.post("/verify-email", async (req, res) => {
 
 // Forgot password
 router.post("/forgot-password", async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const emailInput = (req.body.email || "").trim().toLowerCase();
+  if (!emailInput) {
+    return res.json({ success: true });
+  }
+  const user = await User.findOne({ email: emailInput });
   if (!user) return res.json({ success: true });
   user.resetPasswordToken = crypto.randomBytes(20).toString("hex");
   user.resetPasswordExpires = new Date(Date.now() + 1000 * 60 * 60);
@@ -272,6 +275,55 @@ router.post("/reset-password", async (req, res) => {
   user.resetPasswordExpires = undefined;
   await user.save();
   res.json({ success: true });
+});
+
+// Change password (authenticated)
+router.post("/change-password", async (req, res) => {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: "Missing token" });
+  }
+
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Bitte aktuelles und neues Passwort angeben" });
+  }
+
+  const trimmedNewPassword = newPassword.trim();
+  if (trimmedNewPassword.length < 6) {
+    return res.status(400).json({ error: "Das neue Passwort muss mindestens 6 Zeichen lang sein" });
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(payload.sub);
+    if (!user) {
+      return res.status(404).json({ error: "Benutzer nicht gefunden" });
+    }
+
+    const hasPassword = user.passwordHash;
+    if (!hasPassword) {
+      return res.status(400).json({ error: "Es ist kein Passwort hinterlegt" });
+    }
+
+    const match = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!match) {
+      return res.status(400).json({ error: "Das aktuelle Passwort ist falsch" });
+    }
+
+    user.passwordHash = await bcrypt.hash(trimmedNewPassword, 10);
+    await user.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Ungültiges oder abgelaufenes Token" });
+    }
+    console.error("Change password error:", err.message);
+    res.status(500).json({ error: "Passwort konnte nicht geändert werden" });
+  }
 });
 
 // Update addresses

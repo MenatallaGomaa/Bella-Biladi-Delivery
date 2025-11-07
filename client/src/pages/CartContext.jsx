@@ -1,18 +1,45 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
+import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  // Load cart from localStorage initially
-  const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem("cart");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const { user } = useAuth();
 
-  // Save cart to localStorage whenever it changes
+  const storageKey = useMemo(() => {
+    return user?.id ? `cart:${user.id}` : "cart:guest";
+  }, [user?.id]);
+
+  const [cart, setCart] = useState([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
+    setIsHydrated(false);
+    try {
+      const saved = localStorage.getItem(storageKey);
+      setCart(saved ? JSON.parse(saved) : []);
+    } catch (err) {
+      console.warn("⚠️ Fehler beim Lesen des Warenkorbs:", err);
+      setCart([]);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, [storageKey]);
+
+  // migrate legacy cart key once
+  useEffect(() => {
+    const legacy = localStorage.getItem("cart");
+    if (legacy && !localStorage.getItem(storageKey)) {
+      localStorage.setItem(storageKey, legacy);
+    }
+    localStorage.removeItem("cart");
+  }, [storageKey]);
+
+  // Save cart to localStorage whenever it changes and hydration finished
+  useEffect(() => {
+    if (!isHydrated) return;
+    localStorage.setItem(storageKey, JSON.stringify(cart));
+  }, [cart, storageKey, isHydrated]);
 
   // ✅ Add item (adds one instance)
   function addToCart(item) {
@@ -47,7 +74,7 @@ export function CartProvider({ children }) {
   // ✅ Clear entire cart
   function clearCart() {
     setCart([]);
-    localStorage.removeItem("cart");
+    localStorage.removeItem(storageKey);
   }
 
   return (

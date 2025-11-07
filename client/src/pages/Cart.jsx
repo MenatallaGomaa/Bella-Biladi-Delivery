@@ -145,6 +145,24 @@ export default function Cart({ onNavigate }) {
                   <div className="text-sm text-gray-500">
                     {item.description}
                   </div>
+                  {item.customizations && (
+                    <div className="mt-1 space-y-1 text-xs text-gray-500">
+                      {item.customizations.dip && (
+                        <div>Dip: {item.customizations.dip}</div>
+                      )}
+                      {item.customizations.cheese && (
+                        <div>Käse: {item.customizations.cheese}</div>
+                      )}
+                      {item.customizations.extras?.length > 0 && (
+                        <div>
+                          Extras: {" "}
+                          {item.customizations.extras
+                            .map((extra) => extra.label)
+                            .join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="text-sm font-semibold">
                     {(item.priceCents / 100).toFixed(2)} €
                   </div>

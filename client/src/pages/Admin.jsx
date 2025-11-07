@@ -270,7 +270,7 @@ export default function Admin({ onNavigate }) {
   }
 
   return (
-    <div className="min-h-screen bg-amber-200 p-4 sm:p-6 flex justify-center">
+    <div className="bg-amber-200 p-4 sm:p-6 flex justify-center">
       <div className="w-full max-w-6xl bg-white rounded-2xl shadow p-5 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
@@ -336,7 +336,7 @@ export default function Admin({ onNavigate }) {
                 Keine Bestellungen gefunden.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
                 {orders.map((order) => (
                   <div
                     key={order._id}

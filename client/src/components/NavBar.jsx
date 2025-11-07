@@ -3,14 +3,17 @@ import { useCart } from "../pages/CartContext";
 import { useAuth } from "../pages/AuthContext";
 
 export default function NavBar({ activePage, onNavigate }) {
-  const { cart } = useCart();
+  const { cart, lastAdded } = useCart();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const dropdownRef = useRef();
 
-  // ✅ Only keep the needed links
-  const links = ["Home", "Warenkorb", "Kasse"];
+  const navItems = [
+    { key: "Home", label: "Home", icon: "/pizza.png" },
+    { key: "Warenkorb", label: "Warenkorb", icon: "/shopping-bag.png" },
+    { key: "Kasse", label: "Kasse", icon: "/checkout.png" },
+  ];
 
   // ✅ Close dropdown when clicking outside
   useEffect(() => {
@@ -85,24 +88,30 @@ export default function NavBar({ activePage, onNavigate }) {
           </div>
 
           <div className="hidden sm:flex items-center gap-2">
-            {links.map((link) => (
+            {navItems.map(({ key, label, icon }) => (
               <button
-                key={link}
-                onClick={() => handleLinkClick(link)}
-                className={`relative text-sm px-2 py-1 rounded transition-colors ${
-                  activePage === link ||
-                  (link === "Warenkorb" && activePage === "Cart") ||
-                  (link === "Kasse" && activePage === "CheckoutPayment")
-                    ? "bg-amber-400 text-black font-semibold"
-                    : "hover:bg-amber-100 hover:text-black"
+                key={key}
+                onClick={() => handleLinkClick(key)}
+                className={`relative flex items-center justify-center text-sm px-3 py-1.5 rounded-full transition-colors ${
+                  activePage === key ||
+                  (key === "Warenkorb" && activePage === "Cart") ||
+                  (key === "Kasse" && activePage === "CheckoutPayment")
+                    ? "bg-amber-400 text-black font-semibold shadow"
+                    : "hover:bg-amber-100 text-gray-700"
                 }`}
               >
-                {link}
-                {link === "Warenkorb" && cart.length > 0 && (
-                  <span className="absolute -top-2 -right-3 bg-amber-500 text-white text-xs rounded-full px-2">
-                    {cart.length}
-                  </span>
-                )}
+                <span className="relative">
+                  <img src={icon} alt="" className="h-6 w-6" />
+                  {key === "Warenkorb" && cart.length > 0 && (
+                    <span
+                      className={`absolute -top-2 -right-2 bg-amber-500 text-white text-[0.65rem] rounded-full px-1 transition-transform flex items-center justify-center min-w-[1.15rem] h-4 leading-none ${
+                        lastAdded ? "animate-bounce" : ""
+                      }`}
+                    >
+                      {cart.length}
+                    </span>
+                  )}
+                </span>
               </button>
             ))}
           </div>
@@ -210,30 +219,36 @@ export default function NavBar({ activePage, onNavigate }) {
         </div>
 
         <div
-          className={`sm:hidden flex-col gap-2 ${
-            navOpen ? "flex" : "hidden"
-          }`}
+          className={`sm:hidden ${navOpen ? "flex" : "hidden"} justify-center`}
         >
-          {links.map((link) => (
-            <button
-              key={link}
-              onClick={() => handleLinkClick(link)}
-              className={`relative text-sm px-3 py-2 rounded-lg text-left transition-colors ${
-                activePage === link ||
-                (link === "Warenkorb" && activePage === "Cart") ||
-                (link === "Kasse" && activePage === "CheckoutPayment")
-                  ? "bg-amber-300 text-black font-semibold"
-                  : "bg-amber-100 text-gray-700 hover:bg-amber-200"
-              }`}
-            >
-              {link}
-              {link === "Warenkorb" && cart.length > 0 && (
-                <span className="absolute top-2 right-3 bg-amber-500 text-white text-xs rounded-full px-2">
-                  {cart.length}
+          <div className="inline-flex w-full rounded-2xl border border-amber-300 overflow-hidden bg-white">
+            {navItems.map(({ key, label, icon }) => (
+              <button
+                key={`mobile-${key}`}
+                onClick={() => handleLinkClick(key)}
+                className={`relative flex-1 flex items-center justify-center text-sm px-3 py-2 transition-colors ${
+                  activePage === key ||
+                  (key === "Warenkorb" && activePage === "Cart") ||
+                  (key === "Kasse" && activePage === "CheckoutPayment")
+                    ? "bg-amber-400 text-black font-semibold"
+                    : "bg-white hover:bg-amber-100 text-gray-700"
+                }`}
+              >
+                <span className="relative">
+                  <img src={icon} alt="" className="h-6 w-6" />
+                  {key === "Warenkorb" && cart.length > 0 && (
+                    <span
+                      className={`absolute -top-2 -right-2 bg-amber-500 text-white text-[0.65rem] rounded-full px-1 transition-transform flex items-center justify-center min-w-[1.15rem] h-4 leading-none ${
+                        lastAdded ? "animate-bounce" : ""
+                      }`}
+                    >
+                      {cart.length}
+                    </span>
+                  )}
                 </span>
-              )}
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </nav>

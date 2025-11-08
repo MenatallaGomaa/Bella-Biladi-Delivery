@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import itemsRoutes from "./routes/items.js";
 import ordersRoutes from "./routes/orders.js";
@@ -68,17 +69,20 @@ mongoose
 
 // ✅ Serve frontend build (React)
 const clientDistPath = path.join(__dirname, "../client/dist");
-app.use(express.static(clientDistPath));
+if (fs.existsSync(clientDistPath)) {
+  console.log("📦 Serving static files from", clientDistPath);
+  app.use(express.static(clientDistPath));
 
-// For any non-API routes, serve React index.html
-app.use((req, res, next) => {
-  // Skip API routes and static files
-  if (req.path.startsWith("/api") || req.path.startsWith("/public")) {
-    return next();
-  }
-  // Serve index.html for all other routes (React Router)
-  res.sendFile(path.join(clientDistPath, "index.html"));
-});
+  // For any non-API routes, serve React index.html
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/public")) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, "index.html"));
+  });
+} else {
+  console.log("⚠️ client/dist not found – skipping static file serving (API-only mode)");
+}
 
 // ✅ Start server
 const PORT = process.env.PORT || 4000;

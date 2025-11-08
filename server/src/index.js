@@ -19,9 +19,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Middleware
-const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : [];
+const allowedOrigins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+if (allowedOrigins.length === 0) {
+  console.warn("⚠️ No CORS_ORIGIN configured. Only localhost origins will be allowed.");
+} else {
+  console.log("🌐 Allowed CORS origins:", allowedOrigins);
+}
 
 // Always allow localhost in development
 const localhostOrigins = [
@@ -48,6 +55,7 @@ app.use(cors({
       return callback(null, true);
     }
     
+    console.warn(`🚫 CORS blocked origin: ${origin}`);
     callback(new Error("Not allowed by CORS"));
   },
   credentials: true

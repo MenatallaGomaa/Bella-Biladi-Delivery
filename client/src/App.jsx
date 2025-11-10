@@ -19,6 +19,8 @@ import "./index.css";
 
 function MainApp() {
   const [items, setItems] = useState([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [itemsError, setItemsError] = useState("");
   const [active, setActive] = useState("Beliebt");
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [page, setPage] = useState(() => {
@@ -70,12 +72,60 @@ function MainApp() {
     window.history.pushState({}, "", path);
   }, [page]);
 
-  // 🍕 Fetch menu items
+  // 🍕 Fetch menu items with retry logic for cold starts
   useEffect(() => {
-    api
-      .get("/api/items")
-      .then((r) => setItems(r.data))
-      .catch((err) => console.warn("⚠️ Backend not ready:", err.message));
+    let retryCount = 0;
+    const maxRetries = 5;
+    const baseDelay = 2000; // Start with 2 seconds
+    
+    const fetchItemsWithRetry = async () => {
+      setItemsLoading(true);
+      setItemsError("");
+      
+      const attemptFetch = async (attemptNumber) => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per attempt
+          
+          const response = await api.get("/api/items", {
+            signal: controller.signal,
+            timeout: 15000,
+          });
+          
+          clearTimeout(timeoutId);
+          setItems(response.data || []);
+          setItemsLoading(false);
+          setItemsError("");
+          console.log("✅ Items loaded successfully");
+          return true; // Success
+        } catch (err) {
+          clearTimeout(timeoutId);
+          
+          if (attemptNumber < maxRetries) {
+            const delay = baseDelay * Math.pow(2, attemptNumber); // Exponential backoff
+            console.log(`⚠️ Backend not ready (attempt ${attemptNumber + 1}/${maxRetries}), retrying in ${delay/1000}s...`);
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return attemptFetch(attemptNumber + 1);
+          } else {
+            // All retries failed
+            console.error("❌ Failed to load items after", maxRetries, "attempts:", err.message);
+            setItemsError("Backend wird gestartet... Bitte warten Sie einen Moment und laden Sie die Seite neu.");
+            setItemsLoading(false);
+            // Keep trying in background every 10 seconds
+            setTimeout(() => {
+              console.log("🔄 Retrying items fetch in background...");
+              fetchItemsWithRetry();
+            }, 10000);
+            return false;
+          }
+        }
+      };
+      
+      attemptFetch(0);
+    };
+    
+    fetchItemsWithRetry();
   }, []);
 
   // 📜 Show/hide scroll to top button
@@ -275,27 +325,70 @@ function MainApp() {
             <div className="max-w-5xl mx-auto px-3 py-6">
               <h2 className="text-3xl font-bold mb-4">BellaBiladi</h2>
 
-              <CategoryPills
-                tabs={categories}
-                active={active}
-                onPick={setActive}
-              />
+              {/* Loading State */}
+              {itemsLoading && (
+                <div className="bg-white rounded-lg p-8 text-center mb-6">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-4"></div>
+                  <p className="text-gray-700 font-medium">Menü wird geladen...</p>
+                  <p className="text-sm text-gray-500 mt-2">Backend wird gestartet, bitte warten Sie einen Moment</p>
+                </div>
+              )}
 
-              {/* Render all categories in order */}
-              {categories.map((cat) => {
-                const items = grouped.get(cat) || [];
-                if (items.length === 0) return null;
-                
-                return (
-                  <Section
-                    key={cat}
-                    title={cat}
-                    items={cat === "Beliebt" ? items.slice(0, 5) : items}
-                    ref={(el) => (sectionRefs.current[cat] = el)}
-                    onAddToCart={addToCart}
+              {/* Error State */}
+              {itemsError && !itemsLoading && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">{itemsError}</p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="mt-2 text-sm font-medium text-yellow-800 underline"
+                      >
+                        Seite neu laden
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Content */}
+              {!itemsLoading && items.length > 0 && (
+                <>
+                  <CategoryPills
+                    tabs={categories}
+                    active={active}
+                    onPick={setActive}
                   />
-                );
-              })}
+
+                  {/* Render all categories in order */}
+                  {categories.map((cat) => {
+                    const categoryItems = grouped.get(cat) || [];
+                    if (categoryItems.length === 0) return null;
+                    
+                    return (
+                      <Section
+                        key={cat}
+                        title={cat}
+                        items={cat === "Beliebt" ? categoryItems.slice(0, 5) : categoryItems}
+                        ref={(el) => (sectionRefs.current[cat] = el)}
+                        onAddToCart={addToCart}
+                      />
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Empty State */}
+              {!itemsLoading && !itemsError && items.length === 0 && (
+                <div className="bg-white rounded-lg p-8 text-center">
+                  <p className="text-gray-600">Keine Artikel verfügbar.</p>
+                </div>
+              )}
             </div>
           </div>
         )}

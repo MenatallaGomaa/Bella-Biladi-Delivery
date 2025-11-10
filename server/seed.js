@@ -579,32 +579,11 @@ const items = [
     imageUrl: "/fritz-limo-ginger-lime.webp",
   },
   {
-    name: "Fritz Bio Apfelschorle",
-    description: "Erfrischende Schorle mit 66% Bio-Apfeldirektsaft.",
-    priceCents: 350,
-    category: "drinks",
-    imageUrl: "/fritz-spritz-organic-apple.webp",
-  },
-  {
     name: "Fritz Bio Traubenschorle",
     description: "Fruchtige Schorle mit 50% Bio-Direktsaft aus italienischen Trauben.",
     priceCents: 350,
     category: "drinks",
     imageUrl: "/fritz-spritz-organic-grape.webp",
-  },
-  {
-    name: "Fritz Bio Rhabarberschorle",
-    description: "Säuerliche Schorle mit 40% Bio-Rhabarberdirektsaft.",
-    priceCents: 350,
-    category: "drinks",
-    imageUrl: "/fritz-spritz-organic-rhubarb.webp",
-  },
-  {
-    name: "Fritz Anjola Bio-Ananas-Limette",
-    description: "Tropische Erfrischung mit 15% Bio-Ananassaft & 5% Bio-Limettensaft.",
-    priceCents: 350,
-    category: "drinks",
-    imageUrl: "/fritz-anjola-organic-pineapple-lime.webp",
   },
   {
     name: "Fritz Mischmasch Kola + Orange",

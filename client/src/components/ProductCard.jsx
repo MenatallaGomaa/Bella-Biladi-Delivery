@@ -14,6 +14,11 @@ const DIP_OPTIONS = [
   { id: "ohne", label: "Ohne Dip" },
 ];
 
+const POMMES_DIP_OPTIONS = [
+  { id: "ketchup", label: "Mit Ketchup" },
+  { id: "mayonnaise", label: "Mit Mayonnaise" },
+];
+
 const CHEESE_OPTIONS = [
   { id: "klassisch", label: "Normaler Käse" },
   { id: "vegan", label: "Veganer Käse" },
@@ -52,7 +57,9 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
   const [imageError, setImageError] = useState(false);
   const imageSrc = imageError || !item.imageUrl ? "/main.jpeg" : item.imageUrl;
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDip, setSelectedDip] = useState(DIP_OPTIONS[0].id);
+  const category = item.category?.toLowerCase() || "";
+  const isPommesFritesItem = category === "french fries";
+  const [selectedDip, setSelectedDip] = useState(isPommesFritesItem ? POMMES_DIP_OPTIONS[0].id : DIP_OPTIONS[0].id);
   const [selectedCheese, setSelectedCheese] = useState(CHEESE_OPTIONS[0].id);
   const [selectedExtras, setSelectedExtras] = useState(new Set());
   const [quantity, setQuantity] = useState(1);
@@ -86,7 +93,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     setImageError(true);
   };
 
-  const { isPizza, isPizzaRoll, isDrink, isDessert } = useMemo(() => {
+  const { isPizza, isPizzaRoll, isDrink, isDessert, isFingerfood, isPommesFrites } = useMemo(() => {
     const category = item.category?.toLowerCase() || "";
     const name = item.name?.toLowerCase() || "";
 
@@ -104,12 +111,24 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     const isPizzaItem = category === "pizza" || (!isRoll && pizzaKeywords);
     const isDrinkItem = category === "drinks";
     const isDessertItem = category === "desserts";
+    const isFingerfoodItem = category === "fingerfood";
+    const isPommesFritesItem = category === "french fries";
 
-    return { isPizza: isPizzaItem, isPizzaRoll: isRoll, isDrink: isDrinkItem, isDessert: isDessertItem };
+    return { 
+      isPizza: isPizzaItem, 
+      isPizzaRoll: isRoll, 
+      isDrink: isDrinkItem, 
+      isDessert: isDessertItem,
+      isFingerfood: isFingerfoodItem,
+      isPommesFrites: isPommesFritesItem
+    };
   }, [item.category, item.name]);
 
   const resetCustomization = () => {
-    setSelectedDip(DIP_OPTIONS[0].id);
+    // Set default dip based on item type
+    const category = item.category?.toLowerCase() || "";
+    const isPommesFritesItem = category === "french fries";
+    setSelectedDip(isPommesFritesItem ? POMMES_DIP_OPTIONS[0].id : DIP_OPTIONS[0].id);
     setSelectedCheese(CHEESE_OPTIONS[0].id);
     setSelectedExtras(new Set());
     setQuantity(1);
@@ -121,7 +140,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       return;
     }
     
-    if (isPizza || isPizzaRoll) {
+    if (isPizza || isPizzaRoll || isFingerfood || isPommesFrites) {
       setIsModalOpen(true);
     } else {
       addToCart({ ...item, baseItemId: baseId });
@@ -134,6 +153,17 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       setIsModalOpen(false);
     }
   }, [isCartExpanded, isModalOpen]);
+
+  // Reset dip selection when modal opens based on item type
+  useEffect(() => {
+    if (isModalOpen) {
+      if (isPommesFrites) {
+        setSelectedDip(POMMES_DIP_OPTIONS[0].id);
+      } else if (isPizzaRoll || isFingerfood) {
+        setSelectedDip(DIP_OPTIONS[0].id);
+      }
+    }
+  }, [isModalOpen, isPommesFrites, isPizzaRoll, isFingerfood]);
 
   const handleCardActivate = (event) => {
     if (
@@ -172,8 +202,14 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     const details = [];
     const customizations = {};
 
-    if (isPizzaRoll) {
+    if (isPizzaRoll || isFingerfood) {
       const dipOption = DIP_OPTIONS.find((d) => d.id === selectedDip) || DIP_OPTIONS[0];
+      customizations.dip = dipOption.label;
+      details.push(`Dip: ${dipOption.label}`);
+    }
+
+    if (isPommesFrites) {
+      const dipOption = POMMES_DIP_OPTIONS.find((d) => d.id === selectedDip) || POMMES_DIP_OPTIONS[0];
       customizations.dip = dipOption.label;
       details.push(`Dip: ${dipOption.label}`);
     }
@@ -244,7 +280,10 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
         >
           <div className="flex items-start justify-between gap-4">
             <h3 className="text-lg font-semibold">
-              {isPizzaRoll ? "Pizzabrötchen anpassen" : "Pizza anpassen"}
+              {isPizzaRoll ? "Pizzabrötchen anpassen" : 
+               isFingerfood ? "Fingerfood anpassen" :
+               isPommesFrites ? "Pommes Frites anpassen" :
+               "Pizza anpassen"}
             </h3>
             <button
               onClick={closeModal}
@@ -256,11 +295,38 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           </div>
 
           <div className="mt-4 space-y-5">
-            {isPizzaRoll && (
+            {(isPizzaRoll || isFingerfood) && (
               <div>
                 <div className="text-sm font-medium text-gray-700">Dip auswählen</div>
                 <div className="mt-3 space-y-2">
                   {DIP_OPTIONS.map((dip) => (
+                    <label
+                      key={dip.id}
+                      className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors ${
+                        selectedDip === dip.id
+                          ? "border-amber-400 bg-amber-50"
+                          : "border-gray-200 hover:border-amber-200"
+                      }`}
+                    >
+                      <span>{dip.label}</span>
+                      <input
+                        type="radio"
+                        name="dip"
+                        checked={selectedDip === dip.id}
+                        onChange={() => setSelectedDip(dip.id)}
+                        className="h-4 w-4 text-amber-500 focus:ring-amber-500"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isPommesFrites && (
+              <div>
+                <div className="text-sm font-medium text-gray-700">Dip auswählen</div>
+                <div className="mt-3 space-y-2">
+                  {POMMES_DIP_OPTIONS.map((dip) => (
                     <label
                       key={dip.id}
                       className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors ${

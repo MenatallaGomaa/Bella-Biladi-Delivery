@@ -7,7 +7,8 @@ import homeIcon from "/public/home.png";
 import clockIcon from "/public/clock.png";
 import chatIcon from "/public/chat.png";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000";
+// Normalize API base URL - remove trailing slash to avoid double slashes
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
 
 // Helper function to get available time slots based on day
 function getAvailableTimeSlots(day) {

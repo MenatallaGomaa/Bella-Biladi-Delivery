@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { getApiBaseUrl, createApiUrl } from "../utils/apiUrl.js";
 
 export const AuthContext = createContext();
 
@@ -14,7 +15,8 @@ export function AuthProvider({ children }) {
         return;
       }
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/profile`, {
+        const profileUrl = createApiUrl(getApiBaseUrl(), "/api/profile");
+        const res = await fetch(profileUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -46,15 +48,48 @@ export function AuthProvider({ children }) {
     loadProfile();
   }, []);
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000";
+  // Get normalized API base URL
+  const apiBase = getApiBaseUrl();
+  
+  // Debug logging (remove in production if needed)
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
+    console.log("🔍 API Base URL Debug:", {
+      raw: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000",
+      normalized: apiBase,
+      loginUrl: createApiUrl(apiBase, "/api/login")
+    });
+  }
+
+  // Helper function to safely parse JSON response
+  const parseJsonResponse = async (res) => {
+    const contentType = res.headers.get("content-type");
+    const text = await res.text();
+    
+    if (!contentType || !contentType.includes("application/json")) {
+      if (res.status === 404) {
+        throw new Error("API-Endpunkt nicht gefunden. Bitte überprüfe die API-URL.");
+      }
+      throw new Error(`Ungültige Antwort vom Server (${res.status}). Bitte versuche es erneut.`);
+    }
+    
+    if (!text || text.trim() === "") {
+      throw new Error("Leere Antwort vom Server.");
+    }
+    
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      throw new Error("Ungültige JSON-Antwort vom Server.");
+    }
+  };
 
   const register = async (name, email, password) => {
-    const res = await fetch(`${apiBase}/api/register`, {
+    const res = await fetch(createApiUrl(apiBase, "/api/register"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
     });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!res.ok) throw new Error(data.error || "Registrierung fehlgeschlagen");
     localStorage.setItem("token", data.token);
     setUser(data.user);
@@ -62,12 +97,15 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    const res = await fetch(`${apiBase}/api/login`, {
+    const loginUrl = createApiUrl(apiBase, "/api/login");
+    console.log("🔍 Login URL:", loginUrl);
+    
+    const res = await fetch(loginUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    const data = await res.json();
+    const data = await parseJsonResponse(res);
     if (!res.ok) throw new Error(data.error || "Login fehlgeschlagen");
     localStorage.setItem("token", data.token);
     // Ensure user object includes role
@@ -89,25 +127,25 @@ export function AuthProvider({ children }) {
   };
 
   const requestPasswordReset = async (email) => {
-    const res = await fetch(`${apiBase}/api/forgot-password`, {
+    const res = await fetch(createApiUrl(apiBase, "/api/forgot-password"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
+      const data = await parseJsonResponse(res).catch(() => ({}));
       throw new Error(data.error || "Zurücksetzen konnte nicht gestartet werden");
     }
     return true;
   };
 
   const resetPassword = async (token, password) => {
-    const res = await fetch(`${apiBase}/api/reset-password`, {
+    const res = await fetch(createApiUrl(apiBase, "/api/reset-password"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token, password }),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = await parseJsonResponse(res).catch(() => ({}));
     if (!res.ok) {
       throw new Error(data.error || "Passwort konnte nicht zurückgesetzt werden");
     }
@@ -117,7 +155,7 @@ export function AuthProvider({ children }) {
   const changePassword = async (currentPassword, newPassword) => {
     const token = localStorage.getItem("token");
     if (!token) throw new Error("Bitte melde dich erneut an");
-    const res = await fetch(`${apiBase}/api/change-password`, {
+    const res = await fetch(createApiUrl(apiBase, "/api/change-password"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -125,7 +163,7 @@ export function AuthProvider({ children }) {
       },
       body: JSON.stringify({ currentPassword, newPassword }),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = await parseJsonResponse(res).catch(() => ({}));
     if (!res.ok) {
       throw new Error(data.error || "Passwort konnte nicht geändert werden");
     }
@@ -137,7 +175,8 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000"}/api/profile`, {
+      const profileUrl = createApiUrl(getApiBaseUrl(), "/api/profile");
+      const res = await fetch(profileUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {

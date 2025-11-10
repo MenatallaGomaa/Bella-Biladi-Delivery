@@ -121,6 +121,22 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     }
   };
 
+  const handleCardActivate = (event) => {
+    if (
+      event?.type === "keydown" &&
+      !["Enter", " ", "Spacebar", "Space"].includes(event.key)
+    ) {
+      return;
+    }
+    event?.preventDefault?.();
+    handleAddClick();
+  };
+
+  const handleButtonClick = (event) => {
+    event.stopPropagation();
+    handleAddClick();
+  };
+
   const handleToggleExtra = (id) => {
     setSelectedExtras((prev) => {
       const next = new Set(prev);
@@ -350,12 +366,16 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       <>
         <div
           ref={ref}
-          className={`relative min-w-[180px] bg-white shadow rounded-lg p-3 pb-2 snap-center transition-all duration-500 ease-out ${
+          className={`relative min-w-[180px] bg-white shadow rounded-lg p-3 pb-2 snap-center transition-all duration-500 ease-out cursor-pointer ${
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4"
           } ${highlighted ? "ring-2 ring-amber-400 shadow-lg" : ""}`}
           style={{ transitionDelay: `${delay}ms` }}
+          role="button"
+          tabIndex={0}
+          onClick={handleCardActivate}
+          onKeyDown={handleCardActivate}
         >
           <img
             src={imageSrc}
@@ -366,7 +386,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           <div className="mt-2 font-medium">{item.name}</div>
           <div className="mt-1 font-semibold mb-1">{euro(item.priceCents)}</div>
           <button
-            onClick={handleAddClick}
+            onClick={handleButtonClick}
             className={`absolute top-2 right-2 bg-white rounded-full p-1 shadow transition-colors ${
               buttonPulse ? "bg-amber-200 animate-pulse" : "hover:bg-amber-200"
             }`}
@@ -383,12 +403,16 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     <>
       <div
         ref={ref}
-        className={`relative flex flex-col sm:flex-row sm:items-center gap-4 bg-white shadow rounded-lg p-4 h-full transition-all duration-500 ease-out ${
+        className={`relative flex flex-col sm:flex-row sm:items-center gap-4 bg-white shadow rounded-lg p-4 h-full transition-all duration-500 ease-out cursor-pointer ${
           isVisible
             ? "opacity-100 translate-y-0"
             : "opacity-0 translate-y-6"
         } ${highlighted ? "ring-2 ring-amber-400 shadow-lg" : ""}`}
         style={{ transitionDelay: `${delay}ms` }}
+        role="button"
+        tabIndex={0}
+        onClick={handleCardActivate}
+        onKeyDown={handleCardActivate}
       >
         <div className="flex-1">
           <div className="font-medium text-base sm:text-lg">{item.name}</div>
@@ -406,7 +430,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           onError={handleImageError}
         />
         <button
-          onClick={handleAddClick}
+          onClick={handleButtonClick}
           className={`absolute top-3 right-3 bg-white rounded-full p-1.5 shadow transition-colors ${
             buttonPulse ? "bg-amber-200 animate-pulse" : "hover:bg-amber-200"
           }`}

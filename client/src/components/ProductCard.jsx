@@ -86,7 +86,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     setImageError(true);
   };
 
-  const { isPizza, isPizzaRoll } = useMemo(() => {
+  const { isPizza, isPizzaRoll, isDrink } = useMemo(() => {
     const category = item.category?.toLowerCase() || "";
     const name = item.name?.toLowerCase() || "";
 
@@ -102,8 +102,9 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       category === "pizza rolls" ||
       (category === "popular" && pizzaRollKeywords);
     const isPizzaItem = category === "pizza" || (!isRoll && pizzaKeywords);
+    const isDrinkItem = category === "drinks";
 
-    return { isPizza: isPizzaItem, isPizzaRoll: isRoll };
+    return { isPizza: isPizzaItem, isPizzaRoll: isRoll, isDrink: isDrinkItem };
   }, [item.category, item.name]);
 
   const resetCustomization = () => {
@@ -377,14 +378,23 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           onClick={handleCardActivate}
           onKeyDown={handleCardActivate}
         >
-          <div className="w-full h-28 bg-gray-50 rounded-md flex items-center justify-center overflow-hidden">
+          {isDrink ? (
+            <div className="w-full h-28 bg-gray-50 rounded-md flex items-center justify-center overflow-hidden">
+              <img
+                src={imageSrc}
+                alt={item.name}
+                className="max-w-full max-h-full object-contain"
+                onError={handleImageError}
+              />
+            </div>
+          ) : (
             <img
               src={imageSrc}
               alt={item.name}
-              className="max-w-full max-h-full object-contain"
+              className="w-full h-28 object-cover rounded-md"
               onError={handleImageError}
             />
-          </div>
+          )}
           <div className="mt-2 font-medium">{item.name}</div>
           <div className="mt-1 font-semibold mb-1">{euro(item.priceCents)}</div>
           <button
@@ -425,14 +435,23 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
             {euro(item.priceCents)}
           </div>
         </div>
-        <div className="w-full sm:w-28 h-36 sm:h-28 bg-gray-50 rounded-xl border border-amber-100 flex items-center justify-center overflow-hidden">
+        {isDrink ? (
+          <div className="w-full sm:w-28 h-36 sm:h-28 bg-gray-50 rounded-xl border border-amber-100 flex items-center justify-center overflow-hidden">
+            <img
+              src={imageSrc}
+              alt={item.name}
+              className="max-w-full max-h-full object-contain"
+              onError={handleImageError}
+            />
+          </div>
+        ) : (
           <img
             src={imageSrc}
             alt={item.name}
-            className="max-w-full max-h-full object-contain"
+            className="w-full sm:w-28 h-36 sm:h-28 object-cover rounded-xl border border-amber-100"
             onError={handleImageError}
           />
-        </div>
+        )}
         <button
           onClick={handleButtonClick}
           className={`absolute top-3 right-3 bg-white rounded-full p-1.5 shadow transition-colors ${

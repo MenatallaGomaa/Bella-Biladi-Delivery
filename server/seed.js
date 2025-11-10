@@ -355,34 +355,94 @@ const items = [
     imageUrl: "/pizzabroetchen.jpeg",
   },
 
+  // ---------- SALATE & ANTIPASTI ----------
+  {
+    name: "Bruschetta",
+    description: "Hausgemachtes Brot mit Tomaten, Zwiebeln und Knoblauch. Vegan.",
+    priceCents: 600,
+    category: "Salads",
+    imageUrl: "/bruschetta.jpg",
+  },
+  {
+    name: "Tomaten & Mozzarellascheiben",
+    description: "Frische Tomaten und Mozzarella mit Basilikum. Veggie.",
+    priceCents: 700,
+    category: "Salads",
+    imageUrl: "/tomaten-mozzerella.webp",
+  },
+  {
+    name: "Antipasti",
+    description: "Gegrilltes Gemüse, vegan.",
+    priceCents: 800,
+    category: "Salads",
+    imageUrl: "/antipasti.jpg",
+  },
+  {
+    name: "Caesar Salad",
+    description: "Salat, Croutons, Parmesan, Dressing & Hähnchen – auf Wunsch vegan.",
+    priceCents: 800,
+    category: "Salads",
+    imageUrl: "/caesar-salad.jpg",
+  },
+
+  // ---------- FINGERFOOD ----------
+  {
+    name: "Chicken Wings",
+    description: "6 Stück inklusive Dip.",
+    priceCents: 750,
+    category: "Fingerfood",
+    imageUrl: "/ChickenWings.jpg",
+  },
+  {
+    name: "Chicken Nuggets",
+    description: "9 Stück inklusive Dip.",
+    priceCents: 750,
+    category: "Fingerfood",
+    imageUrl: "/Chicken-Nuggets.jpg",
+  },
+  {
+    name: "Mozzarella Sticks",
+    description: "6 Stück inklusive Dip. Veggie.",
+    priceCents: 650,
+    category: "Fingerfood",
+    imageUrl: "/Mozzarella-Sticks.jpeg",
+  },
+  {
+    name: "Snack Box",
+    description: "3x Wings, 3x Nuggets, 4x Mozzarella Sticks inklusive Dip.",
+    priceCents: 1000,
+    category: "Fingerfood",
+    imageUrl: "/snack-box.avif",
+  },
+
   // ---------- SPAGHETTI ----------
   {
     name: "Spaghetti Napoli",
     description: "Tomatensauce, Knoblauch, Basilikum und Olivenöl (vegan).",
     priceCents: 800,
     category: "Spaghetti",
-    imageUrl: "/spaghetti-napoli.webp",
+    imageUrl: "/spaghetti.jpeg",
   },
   {
     name: "Spaghetti Aglio e Olio",
     description: "Knoblauch, Chili, Olivenöl und Petersilie (vegan).",
     priceCents: 800,
     category: "Spaghetti",
-    imageUrl: "/Spaghetti Aglio e Olio.avif",
+    imageUrl: "/spaghetti.jpeg",
   },
   {
     name: "Spaghetti Bolognese",
     description: "Rinderhack, Zwiebeln, Tomatensauce und Knoblauch.",
     priceCents: 950,
     category: "Spaghetti",
-    imageUrl: "/Spaghetti Bolognese.jpg",
+    imageUrl: "/spaghetti.jpeg",
   },
   {
     name: "Spaghetti Carbonara",
     description: "Sahnesauce, Rinderbacon, Ei, Parmesan und Pfeffer.",
     priceCents: 950,
     category: "Spaghetti",
-    imageUrl: "/Spaghetti Carbonara.avif",
+    imageUrl: "/spaghetti.jpeg",
   },
 
   // ---------- PASTA ÜBERBACKEN ----------
@@ -413,6 +473,45 @@ const items = [
     priceCents: 950,
     category: "Baked Pasta",
     imageUrl: "/Pasta-ueberbacken.jpeg",
+  },
+
+  // ---------- BURGER ----------
+  {
+    name: "Cheeseburger",
+    description: "Saftiger Rindfleischburger mit Käse.",
+    priceCents: 990,
+    category: "Burger",
+    imageUrl: "/burger.jpeg",
+  },
+  {
+    name: "Chickenburger",
+    description: "Knuspriges Hähnchenfilet im Burger.",
+    priceCents: 990,
+    category: "Burger",
+    imageUrl: "/burger.jpeg",
+  },
+  {
+    name: "Vegan Burger",
+    description: "Pflanzlicher Patty mit frischem Gemüse.",
+    priceCents: 990,
+    category: "Burger",
+    imageUrl: "/burger.jpeg",
+  },
+
+  // ---------- POMMES FRITES ----------
+  {
+    name: "Pommes Frites (kleine Portion)",
+    description: "Mit Ketchup oder Mayo inklusive.",
+    priceCents: 400,
+    category: "French fries",
+    imageUrl: "/pommes.jpeg",
+  },
+  {
+    name: "Pommes Frites (große Portion)",
+    description: "Mit Ketchup oder Mayo inklusive.",
+    priceCents: 600,
+    category: "French fries",
+    imageUrl: "/pommes.jpeg",
   },
 ];
 

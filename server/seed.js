@@ -641,6 +641,29 @@ const items = [
     category: "drinks",
     imageUrl: "/wasser.png",
   },
+
+  // ---------- DESSERTS ----------
+  {
+    name: "Tiramisu",
+    description: "Klassisches italienisches Dessert mit Kaffee und Mascarpone.",
+    priceCents: 450,
+    category: "Desserts",
+    imageUrl: "/tiramisu.webp",
+  },
+  {
+    name: "3 Stk baqlawa",
+    description: "Süßes Gebäck aus Blätterteig mit Honig und Nüssen.",
+    priceCents: 400,
+    category: "Desserts",
+    imageUrl: "/Baklava.jpg",
+  },
+  {
+    name: "Kuchen",
+    description: "Hausgemachter Kuchen.",
+    priceCents: 450,
+    category: "Desserts",
+    imageUrl: "/cake.jpg",
+  },
 ];
 
 (async () => {

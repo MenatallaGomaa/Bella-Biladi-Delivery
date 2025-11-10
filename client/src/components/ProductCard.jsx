@@ -86,7 +86,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     setImageError(true);
   };
 
-  const { isPizza, isPizzaRoll, isDrink } = useMemo(() => {
+  const { isPizza, isPizzaRoll, isDrink, isDessert } = useMemo(() => {
     const category = item.category?.toLowerCase() || "";
     const name = item.name?.toLowerCase() || "";
 
@@ -103,8 +103,9 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       (category === "popular" && pizzaRollKeywords);
     const isPizzaItem = category === "pizza" || (!isRoll && pizzaKeywords);
     const isDrinkItem = category === "drinks";
+    const isDessertItem = category === "desserts";
 
-    return { isPizza: isPizzaItem, isPizzaRoll: isRoll, isDrink: isDrinkItem };
+    return { isPizza: isPizzaItem, isPizzaRoll: isRoll, isDrink: isDrinkItem, isDessert: isDessertItem };
   }, [item.category, item.name]);
 
   const resetCustomization = () => {
@@ -378,7 +379,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           onClick={handleCardActivate}
           onKeyDown={handleCardActivate}
         >
-          {isDrink ? (
+          {isDrink || isDessert ? (
             <div className="w-full h-28 bg-gray-50 rounded-md flex items-center justify-center overflow-hidden">
               <img
                 src={imageSrc}
@@ -435,7 +436,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
             {euro(item.priceCents)}
           </div>
         </div>
-        {isDrink ? (
+        {isDrink || isDessert ? (
           <div className="w-full sm:w-28 h-36 sm:h-28 bg-gray-50 rounded-xl border border-amber-100 flex items-center justify-center overflow-hidden">
             <img
               src={imageSrc}

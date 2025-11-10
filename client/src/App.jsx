@@ -432,7 +432,7 @@ function MainApp() {
 
       {/* 🦶 FOOTER */}
       {!hideFooter && (
-        <footer className="py-8 text-sm text-slate-700 bg-white border-t">
+        <footer className={`py-8 text-sm text-slate-700 bg-white border-t ${!hideFixedCart ? "pb-24 sm:pb-20" : ""}`}>
           <div className="max-w-5xl mx-auto px-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               {/* Contact & Address */}

@@ -10,16 +10,41 @@ import chatIcon from "/public/chat.png";
 // Normalize API base URL - remove trailing slash to avoid double slashes
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
 
-// Helper function to get available time slots based on day
+// Store hours configuration
+// Monday-Saturday: 11:00-22:00, Sunday: 11:00-23:00
+const STORE_HOURS = {
+  0: { open: 11, close: 23 }, // Sunday
+  1: { open: 11, close: 22 }, // Monday
+  2: { open: 11, close: 22 }, // Tuesday
+  3: { open: 11, close: 22 }, // Wednesday
+  4: { open: 11, close: 22 }, // Thursday
+  5: { open: 11, close: 22 }, // Friday
+  6: { open: 11, close: 22 }, // Saturday
+};
+
+// Helper function to get available time slots based on day and store hours
 function getAvailableTimeSlots(day) {
   const now = new Date();
-  const slots = [];
+  const targetDate = day === "Heute" ? now : new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const dayOfWeek = targetDate.getDay();
+  const storeHours = STORE_HOURS[dayOfWeek];
   
-  // Generate all possible time slots (12:00 to 23:45 in 15-minute intervals)
-  for (let hour = 12; hour <= 23; hour++) {
+  if (!storeHours) {
+    return [];
+  }
+  
+  const slots = [];
+  const closeTime = storeHours.close * 60; // Convert to minutes
+  const lastOrderTime = closeTime - 30; // Last 30 minutes no orders
+  
+  // Generate time slots from opening time to closing time (minus 30 mins) in 15-minute intervals
+  for (let hour = storeHours.open; hour < storeHours.close; hour++) {
     for (let minute = 0; minute < 60; minute += 15) {
-      const formatted = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-      slots.push({ formatted, hour, minute });
+      const slotTime = hour * 60 + minute;
+      if (slotTime < lastOrderTime) {
+        const formatted = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+        slots.push({ formatted, hour, minute, slotTime });
+      }
     }
   }
   
@@ -30,17 +55,12 @@ function getAvailableTimeSlots(day) {
     const minTime = currentHour * 60 + currentMinute + 45; // 45 minutes from now
     
     const available = slots
-      .filter(({ hour, minute }) => {
-        const slotTime = hour * 60 + minute;
-        return slotTime >= minTime;
-      })
+      .filter(({ slotTime }) => slotTime >= minTime)
       .map(({ formatted }) => formatted);
     
-    // If no slots available for today (e.g., it's past 23:45), return empty array
-    // The UI will handle this by showing a message or auto-switching to tomorrow
     return available;
   } else {
-    // For tomorrow, show all slots
+    // For tomorrow, show all slots within store hours
     return slots.map(({ formatted }) => formatted);
   }
 }
@@ -63,6 +83,10 @@ export default function CheckoutPayment({ onNavigate }) {
     });
     return Array.from(map.values());
   }, [cart]);
+
+  const totalQuantity = useMemo(() => {
+    return grouped.reduce((sum, item) => sum + item.qty, 0);
+  }, [grouped]);
 
   const subtotal = useMemo(
     () =>
@@ -538,6 +562,20 @@ export default function CheckoutPayment({ onNavigate }) {
         </div>
 
         <div className="bg-white rounded-2xl shadow-md p-6 w-full">
+          <h2 className="text-xl font-bold mb-4">Zahlungsoptionen</h2>
+          <div className="space-y-3 text-sm">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="payment" defaultChecked />
+              <span>Bargeld</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="payment" />
+              <span>Mit Karte bei der Lieferung</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-md p-6 w-full xl:col-span-2">
           <h2 className="text-xl font-bold mb-4">Bestellübersicht</h2>
           <div className="text-sm text-gray-700 space-y-2">
             <div className="flex justify-between border-b pb-2">
@@ -545,7 +583,7 @@ export default function CheckoutPayment({ onNavigate }) {
                 className="text-blue-600 underline cursor-pointer"
                 onClick={() => setShowItems(true)}
               >
-                {cart.length} Artikel anzeigen
+                {totalQuantity} Artikel anzeigen
               </button>
               <span aria-hidden>🍕</span>
             </div>
@@ -651,28 +689,21 @@ export default function CheckoutPayment({ onNavigate }) {
             {submitting ? "Bestellung wird gesendet…" : "Bestellen & Bezahlen"}
           </button>
         </div>
-
-        <div className="bg-white rounded-2xl shadow-md p-6 xl:col-span-2">
-          <h2 className="text-xl font-bold mb-4">Zahlungsoptionen</h2>
-          <div className="space-y-3 text-sm">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="payment" defaultChecked />
-              <span>Bargeld</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="payment" />
-              <span>Mit Karte bei der Lieferung</span>
-            </label>
-          </div>
-        </div>
       </div>
 
       {showItems && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 relative">
+        <div 
+          className="fixed inset-0 bg-black/40 flex justify-center items-center p-4 z-50"
+          onClick={() => setShowItems(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowItems(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-black"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 absolute top-3 right-3"
+              aria-label="Schließen"
             >
               ✕
             </button>
@@ -731,11 +762,18 @@ export default function CheckoutPayment({ onNavigate }) {
       )}
 
       {editing && (
-        <div className="fixed inset-0 bg-black/40 flex justify-center items-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-lg w-full max-w-sm p-6 relative">
+        <div 
+          className="fixed inset-0 bg-black/40 flex justify-center items-center p-4 z-50"
+          onClick={() => setEditing(null)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-lg w-full max-w-sm p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setEditing(null)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-black"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 absolute top-3 right-3"
+              aria-label="Schließen"
             >
               ✕
             </button>

@@ -47,7 +47,7 @@ const EXTRA_OPTIONS = [
 ];
 
 export function ProductCard({ item, compact = false, delay = 0 }) {
-  const { addToCart, lastAdded } = useCart();
+  const { addToCart, lastAdded, isCartExpanded } = useCart();
   const [ref, isVisible] = useScrollAnimation({ threshold: 0.1 });
   const [imageError, setImageError] = useState(false);
   const imageSrc = imageError || !item.imageUrl ? "/main.jpeg" : item.imageUrl;
@@ -116,12 +116,24 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
   };
 
   const handleAddClick = () => {
+    // Don't allow adding items when cart is expanded
+    if (isCartExpanded) {
+      return;
+    }
+    
     if (isPizza || isPizzaRoll) {
       setIsModalOpen(true);
     } else {
       addToCart({ ...item, baseItemId: baseId });
     }
   };
+  
+  // Prevent modal from opening when cart is expanded
+  useEffect(() => {
+    if (isCartExpanded && isModalOpen) {
+      setIsModalOpen(false);
+    }
+  }, [isCartExpanded, isModalOpen]);
 
   const handleCardActivate = (event) => {
     if (
@@ -352,8 +364,18 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
               </button>
             </div>
             <button
-              onClick={handleConfirm}
-              className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black shadow hover:bg-amber-500"
+              onClick={() => {
+                // Don't allow adding items when cart is expanded
+                if (!isCartExpanded) {
+                  handleConfirm();
+                }
+              }}
+              disabled={isCartExpanded}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold text-black shadow ${
+                isCartExpanded 
+                  ? "bg-gray-300 cursor-not-allowed" 
+                  : "bg-amber-400 hover:bg-amber-500"
+              }`}
             >
               Zum Warenkorb hinzufügen
             </button>

@@ -13,6 +13,7 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
   const [isHydrated, setIsHydrated] = useState(false);
   const [lastAdded, setLastAdded] = useState(null);
+  const [isCartExpanded, setIsCartExpanded] = useState(false);
 
   useEffect(() => {
     setIsHydrated(false);
@@ -97,6 +98,8 @@ export function CartProvider({ children }) {
         clearCart,
         setCart,
         lastAdded,
+        isCartExpanded,
+        setIsCartExpanded,
       }}
     >
       {children}

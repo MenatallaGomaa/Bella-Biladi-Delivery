@@ -57,20 +57,11 @@ export default function FixedCart({ onNavigate }) {
   };
 
   return (
-    <>
-      {/* Backdrop overlay - closes cart when clicked */}
-      {isExpanded && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-40"
-          onClick={() => setIsExpanded(false)}
-        />
-      )}
-
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-amber-400 shadow-2xl transition-all duration-300 ${
-          isExpanded ? "h-[70vh] sm:h-[60vh]" : "h-16"
-        }`}
-      >
+    <div
+      className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-amber-400 shadow-2xl transition-all duration-300 ${
+        isExpanded ? "h-[70vh] sm:h-[60vh]" : "h-16"
+      }`}
+    >
         {/* Cart Header - Always Visible */}
         <div
           className="flex items-center justify-between px-4 py-3 bg-amber-200 cursor-pointer"
@@ -239,8 +230,7 @@ export default function FixedCart({ onNavigate }) {
           )}
         </div>
       )}
-      </div>
-    </>
+    </div>
   );
 }
 

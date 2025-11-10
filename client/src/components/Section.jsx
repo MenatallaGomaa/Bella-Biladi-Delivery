@@ -19,7 +19,10 @@ const Section = forwardRef(({ title, items, onAddToCart }, ref) => {
       </h2>
 
       {title === "Beliebt" ? (
-        <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2">
+        <div 
+          className="flex gap-4 overflow-x-auto overflow-y-hidden scrollbar-hide snap-x snap-mandatory pb-2"
+          style={{ touchAction: 'pan-x' }}
+        >
           {items.map((item, index) => {
             const cleanedName = item.name?.replace(/^Beliebte\s+/i, "") || item.name;
             return (

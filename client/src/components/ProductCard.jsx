@@ -71,6 +71,17 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     }
   }, [lastAdded, baseId]);
 
+  useEffect(() => {
+    if (isModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+    document.body.style.overflow = "";
+  }, [isModalOpen]);
+
   const handleImageError = () => {
     setImageError(true);
   };
@@ -184,22 +195,31 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     }
   }, [lastAdded, baseId]);
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    resetCustomization();
+  };
+
   const renderModal = () => {
     if (!isModalOpen) return null;
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+        onClick={closeModal}
+      >
+        <div
+          className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-start justify-between gap-4">
             <h3 className="text-lg font-semibold">
               {isPizzaRoll ? "Pizzabrötchen anpassen" : "Pizza anpassen"}
             </h3>
             <button
-              onClick={() => {
-                setIsModalOpen(false);
-                resetCustomization();
-              }}
-              className="text-gray-400 hover:text-gray-600"
+              onClick={closeModal}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+              aria-label="Schließen"
             >
               ✕
             </button>

@@ -108,6 +108,8 @@ function MainApp() {
       "Pizza": "Pizza",
       "Spaghetti": "Spaghetti",
       "Burger": "Burger",
+      "Salads": "Salate & Antipasti",
+      "Fingerfood": "Fingerfood",
     };
   }, []);
 
@@ -120,6 +122,8 @@ function MainApp() {
       "Spaghetti",
       "Pasta Überbacken",
       "Burger",
+      "Salate & Antipasti",
+      "Fingerfood",
       "Pommes Frites",
       "Getränke",
       "Desserts",

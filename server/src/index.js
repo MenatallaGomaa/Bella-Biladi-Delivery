@@ -70,11 +70,54 @@ app.use("/api", authRoutes);
 app.use("/api", uploadRoutes);
 
 // ✅ MongoDB connection
-const mongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/bb";
+// Default to 'test' database if no database specified (MongoDB Atlas default)
+let mongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/test";
+
+// Ensure database name is specified in connection string
+// MongoDB Atlas format: mongodb+srv://user:pass@cluster.net/database?options
+if (mongoUrl.includes("mongodb+srv://") || mongoUrl.includes("mongodb://")) {
+  try {
+    const url = new URL(mongoUrl.replace("mongodb+srv://", "https://").replace("mongodb://", "http://"));
+    const pathname = url.pathname;
+    
+    // Check if database name is already in the path
+    // Pathname format: /database or /database/ or empty
+    const dbName = pathname.split("/").filter(p => p && !p.includes("?")).pop();
+    
+    if (!dbName || dbName.length < 2) {
+      // No database name found, add /test before query params (MongoDB Atlas default)
+      const queryIndex = mongoUrl.indexOf("?");
+      if (queryIndex > 0) {
+        // Remove trailing slash before query params, then add /test
+        const baseUrl = mongoUrl.substring(0, queryIndex).replace(/\/+$/, "");
+        mongoUrl = baseUrl + "/test" + mongoUrl.substring(queryIndex);
+      } else {
+        // Remove trailing slash, then add /test
+        mongoUrl = mongoUrl.replace(/\/+$/, "") + "/test";
+      }
+    }
+  } catch (e) {
+    // If URL parsing fails, try simple string manipulation
+    if (!mongoUrl.match(/\/[^\/\?]+(\?|$)/)) {
+      const queryIndex = mongoUrl.indexOf("?");
+      if (queryIndex > 0) {
+        mongoUrl = mongoUrl.substring(0, queryIndex) + "/bb" + mongoUrl.substring(queryIndex);
+      } else {
+        mongoUrl = mongoUrl.replace(/\/+$/, "") + "/bb";
+      }
+    }
+  }
+}
+
+console.log("🔍 Connecting to MongoDB:", mongoUrl.replace(/\/\/[^:]+:[^@]+@/, "//***:***@")); // Hide credentials in logs
 
 mongoose
   .connect(mongoUrl)
-  .then(() => console.log("✅ Connected to MongoDB"))
+  .then(() => {
+    console.log("✅ Connected to MongoDB");
+    console.log("📊 Database:", mongoose.connection.db.databaseName);
+    console.log("📋 Collections:", Object.keys(mongoose.connection.collections));
+  })
   .catch((err) => console.error("❌ DB connection error:", err));
 
 // ✅ Serve frontend build (React)

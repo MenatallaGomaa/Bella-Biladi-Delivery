@@ -14,11 +14,28 @@ export function AuthProvider({ children }) {
         setLoading(false);
         return;
       }
+      
+      // Add timeout to prevent hanging
+      const timeoutId = setTimeout(() => {
+        console.warn("⚠️ Profile load timeout - clearing loading state");
+        setLoading(false);
+      }, 10000); // 10 second timeout
+      
       try {
         const profileUrl = createApiUrl(getApiBaseUrl(), "/api/profile");
+        console.log("🔍 Loading profile from:", profileUrl);
+        
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000); // 8 second abort
+        
         const res = await fetch(profileUrl, {
           headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeout);
+        clearTimeout(timeoutId);
+        
         if (res.ok) {
           const profile = await res.json();
           // Ensure user object includes role with fallback
@@ -29,7 +46,7 @@ export function AuthProvider({ children }) {
             role: profile.role || "user", 
             emailVerified: profile.emailVerified || false 
           };
-          console.log("🔍 Profile loaded from API:", userData);
+          console.log("✅ Profile loaded from API:", userData);
           setUser(userData);
         } else {
           // If 404 (user not found) or 401 (unauthorized), clear token
@@ -37,10 +54,20 @@ export function AuthProvider({ children }) {
             console.log("❌ Profile load failed (user not found or invalid token), removing token");
             localStorage.removeItem("token");
             setUser(null);
+          } else {
+            console.warn("⚠️ Profile load failed with status:", res.status);
           }
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === "AbortError") {
+          console.error("❌ Profile request timed out");
+        } else {
+          console.error("❌ Profile load error:", err.message);
+        }
+        // Clear token if there's a network error - user might need to log in again
+        localStorage.removeItem("token");
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -217,3 +244,4 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+

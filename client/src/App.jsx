@@ -227,9 +227,12 @@ function MainApp() {
   // ⏳ Loading auth
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-amber-200">
-        <div className="text-lg font-semibold text-gray-700">
+      <div className="flex flex-col justify-center items-center h-screen bg-amber-200">
+        <div className="text-lg font-semibold text-gray-700 mb-4">
           Benutzerstatus wird geladen...
+        </div>
+        <div className="text-sm text-gray-600">
+          Bitte warten Sie einen Moment
         </div>
       </div>
     );

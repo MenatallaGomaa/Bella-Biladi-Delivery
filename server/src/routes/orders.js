@@ -54,6 +54,138 @@ async function initTransporter() {
 }
 await initTransporter();
 
+// ✅ Helper function to send admin notification email
+async function sendAdminNotification(order, cart, customerInfo, subtotal, total) {
+  if (!transporter) return;
+  
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER || "admin@bellabiladi.de";
+  
+  const orderDate = new Date(order.createdAt).toLocaleDateString("de-DE", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#333;max-width:700px;margin:0 auto;background-color:#ffffff;">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg, #dc2626 0%, #991b1b 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0;">
+        <h1 style="color:#ffffff;margin:0;font-size:28px;">🚨 NEUE BESTELLUNG</h1>
+        <p style="color:#fecaca;margin:10px 0 0 0;font-size:16px;">Bitte sofort bearbeiten</p>
+      </div>
+
+      <!-- Content -->
+      <div style="padding:30px;background-color:#ffffff;">
+        <div style="background-color:#fee2e2;border:2px solid #dc2626;border-radius:8px;padding:20px;margin-bottom:25px;">
+          <div style="margin-bottom:15px;">
+            <p style="margin:5px 0;color:#991b1b;font-size:14px;font-weight:600;">BESTELLNUMMER</p>
+            <p style="margin:5px 0;color:#7f1d1d;font-size:24px;font-weight:bold;letter-spacing:1px;">${order.ref}</p>
+          </div>
+          <div style="margin-bottom:15px;">
+            <p style="margin:5px 0;color:#991b1b;font-size:14px;font-weight:600;">BESTELLDATUM & UHRZEIT</p>
+            <p style="margin:5px 0;color:#7f1d1d;font-size:16px;">${orderDate}</p>
+          </div>
+          <div>
+            <p style="margin:5px 0;color:#991b1b;font-size:14px;font-weight:600;">STATUS</p>
+            <p style="margin:5px 0;color:#dc2626;font-size:18px;font-weight:bold;text-transform:uppercase;">${order.status || "NEW"}</p>
+          </div>
+        </div>
+
+        <!-- Customer Information -->
+        <h3 style="color:#1f2937;font-size:20px;margin:25px 0 15px 0;border-bottom:2px solid #dc2626;padding-bottom:10px;">👤 KUNDENINFORMATIONEN</h3>
+        <div style="background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:25px;">
+          <p style="margin:8px 0;color:#1f2937;font-size:16px;"><strong>Name:</strong> ${customerInfo.name || "Nicht angegeben"}</p>
+          <p style="margin:8px 0;color:#1f2937;font-size:16px;"><strong>📧 E-Mail:</strong> ${customerInfo.email || "Nicht angegeben"}</p>
+          <p style="margin:8px 0;color:#1f2937;font-size:16px;"><strong>📞 Telefon:</strong> ${customerInfo.phone || "Nicht angegeben"}</p>
+          ${customerInfo.address ? `<p style="margin:8px 0;color:#1f2937;font-size:16px;"><strong>📍 Adresse:</strong> ${customerInfo.address}</p>` : ""}
+          <p style="margin:8px 0;color:#1f2937;font-size:16px;"><strong>⏰ Gewünschte Lieferzeit:</strong> ${customerInfo.desiredTime || "So schnell wie möglich"}</p>
+          ${customerInfo.notes ? `<p style="margin:8px 0;color:#1f2937;font-size:16px;"><strong>📝 Notiz:</strong> ${customerInfo.notes}</p>` : ""}
+        </div>
+
+        <!-- Order Items -->
+        <h3 style="color:#1f2937;font-size:20px;margin:25px 0 15px 0;border-bottom:2px solid #dc2626;padding-bottom:10px;">🛒 BESTELLUNG</h3>
+        <div style="background-color:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:25px;">
+          ${cart
+            .map(
+              (i) => `
+                <div style="padding:15px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;background-color:${cart.indexOf(i) % 2 === 0 ? "#ffffff" : "#f9fafb"};">
+                  <div style="flex:1;">
+                    <p style="margin:0;color:#1f2937;font-size:16px;font-weight:600;">${i.qty}× ${i.name}</p>
+                  </div>
+                  <div style="text-align:right;">
+                    <p style="margin:0;color:#dc2626;font-size:16px;font-weight:bold;">€${(
+                      (i.priceCents * i.qty) /
+                      100
+                    ).toFixed(2)}</p>
+                  </div>
+                </div>
+              `
+            )
+            .join("")}
+        </div>
+
+        <!-- Totals -->
+        <div style="margin-top:20px;padding:20px;background-color:#fee2e2;border:2px solid #dc2626;border-radius:8px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <p style="margin:0;color:#7f1d1d;font-size:16px;font-weight:600;">Zwischensumme:</p>
+            <p style="margin:0;color:#7f1d1d;font-size:16px;font-weight:600;">€${(subtotal / 100).toFixed(2)}</p>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+            <p style="margin:0;color:#7f1d1d;font-size:16px;font-weight:600;">Lieferkosten:</p>
+            <p style="margin:0;color:#7f1d1d;font-size:16px;font-weight:600;">€0.00</p>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-top:15px;border-top:2px solid #dc2626;margin-top:15px;">
+            <p style="margin:0;color:#7f1d1d;font-size:22px;font-weight:bold;">GESAMTBETRAG:</p>
+            <p style="margin:0;color:#dc2626;font-size:28px;font-weight:bold;">€${(total / 100).toFixed(2)}</p>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div style="margin-top:20px;padding:15px;background-color:#fef3c7;border-left:4px solid #f59e0b;border-radius:4px;">
+          <p style="margin:0;color:#92400e;font-size:16px;font-weight:600;">💵 Zahlungsmethode: <span style="color:#78350f;">${order.method === "cash_on_delivery" ? "Barzahlung bei Lieferung" : order.method}</span></p>
+        </div>
+
+        <!-- Action Required -->
+        <div style="margin-top:30px;padding:20px;background:linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);border-radius:8px;text-align:center;">
+          <p style="margin:0;color:#7f1d1d;font-size:18px;font-weight:bold;">⚡ BITTE SOFORT BEARBEITEN ⚡</p>
+          <p style="margin:10px 0 0 0;color:#991b1b;font-size:15px;">Bitte bestätigen Sie die Bestellung im Admin-Dashboard und beginnen Sie mit der Zubereitung.</p>
+        </div>
+
+        <!-- Footer -->
+        <div style="margin-top:30px;padding-top:20px;border-top:1px solid #e5e7eb;text-align:center;">
+          <p style="margin:0;color:#6b7280;font-size:14px;">Diese E-Mail wurde automatisch generiert.</p>
+          <p style="margin:5px 0 0 0;color:#6b7280;font-size:14px;">BellaBiladi Admin System</p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color:#1f2937;padding:20px;text-align:center;border-radius:0 0 8px 8px;">
+        <p style="margin:0;color:#9ca3af;font-size:12px;">BellaBiladi | Probstheidaer Straße 21, 04277 Leipzig, Germany</p>
+        <p style="margin:5px 0 0 0;color:#9ca3af;font-size:12px;">Phone: 01521 3274837</p>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"BellaBiladi Admin 🍕" <${
+      process.env.EMAIL_USER || "no-reply@bellabiladi.de"
+    }>`,
+    to: adminEmail,
+    subject: `🚨 NEUE BESTELLUNG: ${order.ref} - €${(total / 100).toFixed(2)}`,
+    html,
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  if (process.env.NODE_ENV !== "production") {
+    console.log("📨 Admin email preview at:", nodemailer.getTestMessageUrl(info));
+  } else {
+    console.log(`✅ Admin notification sent to ${adminEmail}`);
+  }
+}
+
 // ✅ Create order (cash only) and send email confirmation
 r.post("/", async (req, res) => {
   try {
@@ -83,9 +215,9 @@ r.post("/", async (req, res) => {
       return res.status(401).json({ error: "Bitte melde dich an, um eine Bestellung aufzugeben." });
     }
 
-    // Get item data from DB
+    // Get item data from DB (optimized query)
     const ids = items.map((i) => i.itemId);
-    const dbItems = await Item.find({ _id: { $in: ids } });
+    const dbItems = await Item.find({ _id: { $in: ids } }).lean().maxTimeMS(5000); // 5 second timeout
 
     // Validate all items exist
     const missingItems = items.filter((i) => {
@@ -149,6 +281,8 @@ r.post("/", async (req, res) => {
       notes: notes || customer?.notes || "",
     };
 
+    // Save order to MongoDB with timeout
+    const orderStartTime = Date.now();
     const order = await Order.create({
       ref,
       userId: user._id,
@@ -161,58 +295,72 @@ r.post("/", async (req, res) => {
       customer: customerInfo,
       method: "cash_on_delivery",
     });
+    const orderSaveTime = Date.now() - orderStartTime;
 
-    // ✅ Send confirmation email
-    if (customerInfo.email && transporter) {
-      const desiredTime = customerInfo.desiredTime || "So schnell wie möglich";
-      const commentBlock = customerInfo?.notes
-        ? `<p style="margin: 15px 0; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><b>📝 Ihre Notiz:</b> ${customerInfo.notes}</p>`
-        : "";
+    console.log(`✅ Order ${order.ref} saved to MongoDB (ID: ${order._id}) in ${orderSaveTime}ms`);
+    console.log(`   Customer: ${customerInfo.name} (${customerInfo.email})`);
+    console.log(`   Total: €${(total / 100).toFixed(2)}`);
+    console.log(`   Items: ${cart.length} items`);
 
-      // Calculate estimated delivery time
-      const now = new Date();
-      let estimatedDeliveryTime = "";
-      let estimatedDeliveryText = "";
-      
-      if (desiredTime === "So schnell wie möglich" || desiredTime.toLowerCase().includes("so schnell")) {
-        // ASAP: Add 30-45 minutes
-        const estimatedTime = new Date(now.getTime() + 35 * 60 * 1000); // 35 minutes average
-        const hours = estimatedTime.getHours().toString().padStart(2, "0");
-        const minutes = estimatedTime.getMinutes().toString().padStart(2, "0");
-        estimatedDeliveryTime = `${hours}:${minutes} Uhr`;
-        estimatedDeliveryText = `ca. 30-45 Minuten (voraussichtlich um ${estimatedDeliveryTime})`;
-      } else if (desiredTime.toLowerCase().includes("heute")) {
-        // Extract time from "Heute, HH:MM Uhr"
-        const timeMatch = desiredTime.match(/(\d{1,2}):(\d{2})/);
-        if (timeMatch) {
-          estimatedDeliveryTime = `${timeMatch[1]}:${timeMatch[2]} Uhr`;
-          estimatedDeliveryText = `um ${estimatedDeliveryTime}`;
+    // ✅ CRITICAL: Return response IMMEDIATELY - don't wait for anything else
+    res.status(201).json({ ok: true, ref: order.ref, id: order._id });
+    
+    // Log that response was sent
+    console.log(`📤 Response sent for order ${order.ref} (total time: ${Date.now() - orderStartTime}ms)`);
+
+    // ✅ Send emails asynchronously AFTER response is sent (don't block response)
+    // Use setImmediate to ensure this runs after the response is fully sent
+    setImmediate(() => {
+      if (customerInfo.email && transporter) {
+        const desiredTime = customerInfo.desiredTime || "So schnell wie möglich";
+        const commentBlock = customerInfo?.notes
+          ? `<p style="margin: 15px 0; padding: 10px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;"><b>📝 Ihre Notiz:</b> ${customerInfo.notes}</p>`
+          : "";
+
+        // Calculate estimated delivery time
+        const now = new Date();
+        let estimatedDeliveryTime = "";
+        let estimatedDeliveryText = "";
+        
+        if (desiredTime === "So schnell wie möglich" || desiredTime.toLowerCase().includes("so schnell")) {
+          // ASAP: Add 30-45 minutes
+          const estimatedTime = new Date(now.getTime() + 35 * 60 * 1000); // 35 minutes average
+          const hours = estimatedTime.getHours().toString().padStart(2, "0");
+          const minutes = estimatedTime.getMinutes().toString().padStart(2, "0");
+          estimatedDeliveryTime = `${hours}:${minutes} Uhr`;
+          estimatedDeliveryText = `ca. 30-45 Minuten (voraussichtlich um ${estimatedDeliveryTime})`;
+        } else if (desiredTime.toLowerCase().includes("heute")) {
+          // Extract time from "Heute, HH:MM Uhr"
+          const timeMatch = desiredTime.match(/(\d{1,2}):(\d{2})/);
+          if (timeMatch) {
+            estimatedDeliveryTime = `${timeMatch[1]}:${timeMatch[2]} Uhr`;
+            estimatedDeliveryText = `um ${estimatedDeliveryTime}`;
+          } else {
+            estimatedDeliveryText = desiredTime;
+          }
+        } else if (desiredTime.toLowerCase().includes("morgen")) {
+          // Extract time from "Morgen, HH:MM Uhr"
+          const timeMatch = desiredTime.match(/(\d{1,2}):(\d{2})/);
+          if (timeMatch) {
+            estimatedDeliveryTime = `Morgen um ${timeMatch[1]}:${timeMatch[2]} Uhr`;
+            estimatedDeliveryText = estimatedDeliveryTime;
+          } else {
+            estimatedDeliveryText = desiredTime;
+          }
         } else {
           estimatedDeliveryText = desiredTime;
         }
-      } else if (desiredTime.toLowerCase().includes("morgen")) {
-        // Extract time from "Morgen, HH:MM Uhr"
-        const timeMatch = desiredTime.match(/(\d{1,2}):(\d{2})/);
-        if (timeMatch) {
-          estimatedDeliveryTime = `Morgen um ${timeMatch[1]}:${timeMatch[2]} Uhr`;
-          estimatedDeliveryText = estimatedDeliveryTime;
-        } else {
-          estimatedDeliveryText = desiredTime;
-        }
-      } else {
-        estimatedDeliveryText = desiredTime;
-      }
 
-      const orderDate = new Date(order.createdAt).toLocaleDateString("de-DE", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+        const orderDate = new Date(order.createdAt).toLocaleDateString("de-DE", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
 
-      const html = `
+        const html = `
         <div style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;background-color:#ffffff;">
           <!-- Header -->
           <div style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);padding:30px;text-align:center;border-radius:8px 8px 0 0;">
@@ -319,31 +467,37 @@ r.post("/", async (req, res) => {
         </div>
       `;
 
-      const mailOptions = {
-        from: `"BellaBiladi 🍕" <${
-          process.env.EMAIL_USER || "no-reply@bellabiladi.de"
-        }>`,
-        to: customerInfo.email,
-        subject: "🍕 Ihre BellaBiladi Bestellbestätigung",
-        html,
-      };
+        const mailOptions = {
+          from: `"BellaBiladi 🍕" <${
+            process.env.EMAIL_USER || "no-reply@bellabiladi.de"
+          }>`,
+          to: customerInfo.email,
+          subject: "🍕 Ihre BellaBiladi Bestellbestätigung",
+          html,
+        };
 
-      try {
-        const info = await transporter.sendMail(mailOptions);
-        if (process.env.NODE_ENV !== "production") {
-          console.log(
-            "📨 Preview email at:",
-            nodemailer.getTestMessageUrl(info)
-          );
-        } else {
-          console.log(`✅ Email sent to ${customerInfo.email}`);
-        }
-      } catch (err) {
-        console.error("❌ Email send failed:", err.message);
+        // Send email asynchronously (don't await - fire and forget)
+        transporter.sendMail(mailOptions).then((info) => {
+          if (process.env.NODE_ENV !== "production") {
+            console.log(
+              "📨 Preview email at:",
+              nodemailer.getTestMessageUrl(info)
+            );
+          } else {
+            console.log(`✅ Confirmation email sent to ${customerInfo.email}`);
+          }
+        }).catch((err) => {
+          console.error("❌ Customer email send failed:", err.message);
+        });
       }
-    }
 
-    res.status(201).json({ ok: true, ref: order.ref, id: order._id });
+      // ✅ Send admin notification email asynchronously
+      if (transporter) {
+        sendAdminNotification(order, cart, customerInfo, subtotal, total).catch((err) => {
+          console.error("❌ Admin email send failed:", err.message);
+        });
+      }
+    });
   } catch (err) {
     console.error("❌ Error creating order:", err);
     console.error("Error details:", {

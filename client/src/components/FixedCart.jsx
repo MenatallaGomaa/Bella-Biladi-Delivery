@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useCart } from "../pages/CartContext";
 import { useAuth } from "../pages/AuthContext";
 
@@ -7,18 +7,21 @@ export default function FixedCart({ onNavigate }) {
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [deliveryMode, setDeliveryMode] = useState("Lieferung");
+  const hasAutoExpandedRef = useRef(false);
 
-  // Auto-expand when item is added
+  // Auto-expand only the FIRST time an item is added
   useEffect(() => {
-    if (lastAdded) {
+    if (lastAdded && cart.length === 1 && !hasAutoExpandedRef.current) {
       setIsExpanded(true);
+      hasAutoExpandedRef.current = true;
     }
-  }, [lastAdded]);
+  }, [lastAdded, cart.length]);
 
-  // Keep expanded if cart has items
+  // Reset the flag when cart becomes empty
   useEffect(() => {
-    if (cart.length > 0) {
-      setIsExpanded(true);
+    if (cart.length === 0) {
+      hasAutoExpandedRef.current = false;
+      setIsExpanded(false);
     }
   }, [cart.length]);
 
@@ -54,16 +57,25 @@ export default function FixedCart({ onNavigate }) {
   };
 
   return (
-    <div
-      className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-amber-400 shadow-2xl transition-all duration-300 ${
-        isExpanded ? "h-[70vh] sm:h-[60vh]" : "h-16"
-      }`}
-    >
-      {/* Cart Header - Always Visible */}
+    <>
+      {/* Backdrop overlay - closes cart when clicked */}
+      {isExpanded && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-30 z-40"
+          onClick={() => setIsExpanded(false)}
+        />
+      )}
+
       <div
-        className="flex items-center justify-between px-4 py-3 bg-amber-200 cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-amber-400 shadow-2xl transition-all duration-300 ${
+          isExpanded ? "h-[70vh] sm:h-[60vh]" : "h-16"
+        }`}
       >
+        {/* Cart Header - Always Visible */}
+        <div
+          className="flex items-center justify-between px-4 py-3 bg-amber-200 cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
         <div className="flex items-center gap-3">
           <img
             src="/shopping-bag.png"
@@ -227,7 +239,8 @@ export default function FixedCart({ onNavigate }) {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

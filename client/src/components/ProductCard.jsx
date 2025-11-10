@@ -468,11 +468,11 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           onKeyDown={handleCardActivate}
         >
           {isDrink || isDessert ? (
-            <div className="w-full h-28 bg-gray-50 rounded-md flex items-center justify-center overflow-hidden">
+            <div className="w-full h-28 bg-gray-50 rounded-md flex items-center justify-center overflow-hidden p-1">
               <img
                 src={imageSrc}
                 alt={item.name}
-                className="max-w-full max-h-full object-contain"
+                className="h-full w-auto object-contain scale-110"
                 onError={handleImageError}
               />
             </div>
@@ -525,11 +525,11 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           </div>
         </div>
         {isDrink || isDessert ? (
-          <div className="w-full sm:w-28 h-36 sm:h-28 bg-gray-50 rounded-xl border border-amber-100 flex items-center justify-center overflow-hidden">
+          <div className="w-full sm:w-28 h-36 sm:h-28 bg-gray-50 rounded-xl border border-amber-100 flex items-center justify-center overflow-hidden p-1">
             <img
               src={imageSrc}
               alt={item.name}
-              className="max-w-full max-h-full object-contain"
+              className="h-full w-auto object-contain scale-110"
               onError={handleImageError}
             />
           </div>

@@ -4,6 +4,7 @@ import NavBar from "./components/NavBar";
 import Hero from "./components/Hero";
 import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
+import FixedCart from "./components/FixedCart";
 import { CartProvider, useCart } from "./pages/CartContext";
 import { AuthProvider, useAuth } from "./pages/AuthContext";
 import CheckoutPayment from "./pages/CheckoutPayment";
@@ -183,6 +184,15 @@ function MainApp() {
     page === "ForgotPassword" ||
     page === "ResetPassword";
 
+  const hideFixedCart =
+    page === "Checkout" ||
+    page === "CheckoutLogin" ||
+    page === "CheckoutRegister" ||
+    page === "CheckoutPayment" ||
+    page === "Cart" ||
+    page === "ForgotPassword" ||
+    page === "ResetPassword";
+
   // 🧭 Universal navigation handler
   const handleNavigate = (newPage) => {
     // 🔐 Require login for certain routes
@@ -248,7 +258,7 @@ function MainApp() {
           page === "Cart"
             ? "bg-amber-200 flex justify-center items-center overflow-hidden"
             : ""
-        }`}
+        } ${!hideFixedCart ? "pb-20 sm:pb-16" : ""}`}
       >
         {page === "ForgotPassword" && (
           <ForgotPassword onNavigate={handleNavigate} />
@@ -426,7 +436,7 @@ function MainApp() {
       {showScrollTop && page === "Home" && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-50 bg-amber-400 hover:bg-amber-500 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 active:scale-95 group"
+          className="fixed bottom-24 sm:bottom-20 right-8 z-40 bg-amber-400 hover:bg-amber-500 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110 active:scale-95 group"
           aria-label="Scroll to top"
         >
           <svg
@@ -445,6 +455,9 @@ function MainApp() {
           </svg>
         </button>
       )}
+
+      {/* 🛒 Fixed Cart - Always visible except on checkout pages */}
+      {!hideFixedCart && <FixedCart onNavigate={handleNavigate} />}
     </div>
   );
 }

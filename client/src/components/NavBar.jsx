@@ -3,10 +3,9 @@ import { useCart } from "../pages/CartContext";
 import { useAuth } from "../pages/AuthContext";
 
 export default function NavBar({ activePage, onNavigate }) {
-  const { cart, lastAdded } = useCart();
+  const { cart } = useCart();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
   const dropdownRef = useRef();
 
   const navItems = [
@@ -51,8 +50,6 @@ export default function NavBar({ activePage, onNavigate }) {
     } else if (link === "Home") {
       onNavigate("Home");
     }
-
-    setNavOpen(false);
   };
   
   // Allow direct navigation on URL load
@@ -78,16 +75,9 @@ export default function NavBar({ activePage, onNavigate }) {
               className="h-9 w-9 cursor-pointer rounded-full border border-amber-200"
               onClick={() => onNavigate("Home")}
             />
-            <button
-              className="sm:hidden px-2 py-1 text-sm border border-gray-300 rounded-md text-gray-600"
-              onClick={() => setNavOpen((prev) => !prev)}
-              aria-label="Navigation umschalten"
-            >
-              ☰
-            </button>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2">
+          <div className="flex items-center gap-2">
             {navItems.map(({ key, label, icon }) => (
               <button
                 key={key}
@@ -103,11 +93,7 @@ export default function NavBar({ activePage, onNavigate }) {
                 <span className="relative">
                   <img src={icon} alt="" className="h-6 w-6" />
                   {key === "Warenkorb" && cart.length > 0 && (
-                    <span
-                      className={`absolute -top-2 -right-2 bg-amber-500 text-white text-[0.65rem] rounded-full px-1 transition-transform flex items-center justify-center min-w-[1.15rem] h-4 leading-none ${
-                        lastAdded ? "animate-bounce" : ""
-                      }`}
-                    >
+                    <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[0.65rem] rounded-full px-1 transition-transform flex items-center justify-center min-w-[1.15rem] h-4 leading-none">
                       {cart.length}
                     </span>
                   )}
@@ -215,39 +201,6 @@ export default function NavBar({ activePage, onNavigate }) {
                 Anmelden
               </button>
             )}
-          </div>
-        </div>
-
-        <div
-          className={`sm:hidden ${navOpen ? "flex" : "hidden"} justify-center`}
-        >
-          <div className="inline-flex w-full rounded-2xl border border-amber-300 overflow-hidden bg-white">
-            {navItems.map(({ key, label, icon }) => (
-              <button
-                key={`mobile-${key}`}
-                onClick={() => handleLinkClick(key)}
-                className={`relative flex-1 flex items-center justify-center text-sm px-3 py-2 transition-colors ${
-                  activePage === key ||
-                  (key === "Warenkorb" && activePage === "Cart") ||
-                  (key === "Kasse" && activePage === "CheckoutPayment")
-                    ? "bg-amber-400 text-black font-semibold"
-                    : "bg-white hover:bg-amber-100 text-gray-700"
-                }`}
-              >
-                <span className="relative">
-                  <img src={icon} alt="" className="h-6 w-6" />
-                  {key === "Warenkorb" && cart.length > 0 && (
-                    <span
-                      className={`absolute -top-2 -right-2 bg-amber-500 text-white text-[0.65rem] rounded-full px-1 transition-transform flex items-center justify-center min-w-[1.15rem] h-4 leading-none ${
-                        lastAdded ? "animate-bounce" : ""
-                      }`}
-                    >
-                      {cart.length}
-                    </span>
-                  )}
-                </span>
-              </button>
-            ))}
           </div>
         </div>
       </div>

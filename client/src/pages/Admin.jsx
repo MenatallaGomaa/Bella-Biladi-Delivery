@@ -443,7 +443,8 @@ export default function Admin({ onNavigate }) {
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
             {orders.filter(o => o.status === "new").length > 0 && (
               <span className="bg-red-600 text-white text-sm font-bold px-4 py-1.5 rounded-full animate-pulse text-center whitespace-nowrap flex items-center justify-center">
-                {orders.filter(o => o.status === "new").length} neue Bestellung{orders.filter(o => o.status === "new").length > 1 ? "en" : ""}
+                <span>{orders.filter(o => o.status === "new").length}</span>
+                <span className="ml-1">neue Bestellungen</span>
               </span>
             )}
           </div>

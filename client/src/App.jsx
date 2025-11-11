@@ -234,7 +234,8 @@ function MainApp() {
     page === "ForgotPassword" ||
     page === "ResetPassword" ||
     page === "Profile" ||
-    page === "Orders";
+    page === "Orders" ||
+    page === "Admin";
 
   const hideFixedCart =
     page === "Checkout" ||
@@ -245,7 +246,8 @@ function MainApp() {
     page === "ForgotPassword" ||
     page === "ResetPassword" ||
     page === "Profile" ||
-    page === "Orders";
+    page === "Orders" ||
+    page === "Admin";
 
   // 🧭 Universal navigation handler
   const handleNavigate = (newPage) => {

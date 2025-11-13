@@ -5,6 +5,7 @@ import Hero from "./components/Hero";
 import CategoryPills from "./components/CategoryPills";
 import Section from "./components/Section";
 import FixedCart from "./components/FixedCart";
+import AdminOrderNotification from "./components/AdminOrderNotification";
 import { CartProvider, useCart } from "./pages/CartContext";
 import { AuthProvider, useAuth } from "./pages/AuthContext";
 import CheckoutPayment from "./pages/CheckoutPayment";
@@ -557,6 +558,9 @@ function MainApp() {
 
       {/* 🛒 Fixed Cart - Always visible except on checkout pages */}
       {!hideFixedCart && <FixedCart onNavigate={handleNavigate} />}
+
+      {/* 🔔 Admin Order Notification - Global popup for new orders */}
+      <AdminOrderNotification onNavigate={handleNavigate} />
     </div>
   );
 }

@@ -39,6 +39,11 @@ const OrderSchema = new mongoose.Schema(
     },
     method: { type: String, default: "cash_on_delivery" },
     channel: { type: String, default: "web" },
+    driverId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Driver",
+      default: null,
+    },
   },
   { timestamps: true }
 );

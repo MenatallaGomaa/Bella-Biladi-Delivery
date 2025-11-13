@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import Order from "../models/Order.js";
 import Item from "../models/Item.js";
 import User from "../models/User.js";
+import Driver from "../models/Driver.js";
 import jwt from "jsonwebtoken";
 import { requireAdmin } from "../middleware/auth.js";
 
@@ -630,6 +631,60 @@ r.get("/mine", async (req, res) => {
     res.json(orders);
   } catch (err) {
     res.status(401).json({ error: "Invalid token" });
+  }
+});
+
+// ✅ Get driver location for a specific order
+r.get("/:id/driver-location", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ error: "Token required" });
+    }
+
+    let user;
+    try {
+      const payload = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "dev_secret_change_me"
+      );
+      user = await User.findById(payload.sub);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+    } catch (err) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Check if user owns the order or is admin
+    if (user.role !== "admin" && String(order.userId) !== String(user._id)) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    if (!order.driverId) {
+      return res.status(404).json({ error: "No driver assigned to this order" });
+    }
+
+    const driver = await Driver.findById(order.driverId);
+    if (!driver || !driver.currentLocation.latitude) {
+      return res.status(404).json({ error: "Driver location not available" });
+    }
+
+    res.json({
+      latitude: driver.currentLocation.latitude,
+      longitude: driver.currentLocation.longitude,
+      lastUpdated: driver.currentLocation.lastUpdated,
+      driverName: driver.name,
+      driverPhone: driver.phone,
+    });
+  } catch (err) {
+    console.error("Error fetching driver location:", err);
+    res.status(500).json({ error: "Failed to fetch driver location" });
   }
 });
 

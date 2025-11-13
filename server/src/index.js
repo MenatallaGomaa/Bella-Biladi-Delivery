@@ -9,6 +9,7 @@ import itemsRoutes from "./routes/items.js";
 import ordersRoutes from "./routes/orders.js";
 import authRoutes from "./routes/auth.js";
 import uploadRoutes from "./routes/upload.js";
+import driversRoutes from "./routes/drivers.js";
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ app.use("/public", express.static(path.join(__dirname, "../public")));
 // ✅ API routes
 app.use("/api/items", itemsRoutes);
 app.use("/api/orders", ordersRoutes);
+app.use("/api/drivers", driversRoutes);
 app.use("/api", authRoutes);
 app.use("/api", uploadRoutes);
 

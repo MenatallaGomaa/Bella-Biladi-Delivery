@@ -49,9 +49,7 @@ export default function Admin({ onNavigate }) {
   const [status, setStatus] = useState("");
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
-  const [newOrderPopup, setNewOrderPopup] = useState(null);
   const [confirmingOrderId, setConfirmingOrderId] = useState(null);
-  const [lastOrderCheck, setLastOrderCheck] = useState(Date.now());
 
   const [items, setItems] = useState([]);
   const [itemsLoading, setItemsLoading] = useState(false);
@@ -94,32 +92,8 @@ export default function Admin({ onNavigate }) {
       const data = await res.json();
       const ordersList = Array.isArray(data) ? data : [];
       
-      // Check for new orders if polling
-      if (checkForNew) {
-        setOrders((prevOrders) => {
-          if (prevOrders.length > 0) {
-            const newOrders = ordersList.filter(
-              (order) => 
-                order.status === "new" && 
-                !prevOrders.find((o) => o._id === order._id)
-            );
-            if (newOrders.length > 0) {
-              // Show popup for the first new order (check if popup is not already showing)
-              setNewOrderPopup((currentPopup) => {
-                if (!currentPopup) {
-                  return newOrders[0];
-                }
-                return currentPopup;
-              });
-            }
-          }
-          return ordersList;
-        });
-      } else {
-        setOrders(ordersList);
-      }
-      
-      setLastOrderCheck(Date.now());
+      // Update orders list (popup is handled by global AdminOrderNotification component)
+      setOrders(ordersList);
     } catch (err) {
       setOrdersError(err.message);
       if (!checkForNew) setOrders([]);
@@ -167,7 +141,7 @@ export default function Admin({ onNavigate }) {
     if (!canAccess || activeTab !== "orders") return;
     
     const interval = setInterval(() => {
-      fetchOrders(true); // Check for new orders
+      fetchOrders(true); // Refresh orders list
     }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(interval);
@@ -193,6 +167,7 @@ export default function Admin({ onNavigate }) {
     if (!token) return;
     try {
       setConfirmingOrderId(orderId);
+      
       const res = await fetch(`${API_BASE}/api/orders/${orderId}/confirm`, {
         method: "POST",
         headers,
@@ -200,8 +175,7 @@ export default function Admin({ onNavigate }) {
       if (!res.ok) throw new Error("Bestätigung fehlgeschlagen");
       const data = await res.json();
       
-      // Close popup and refresh orders
-      setNewOrderPopup(null);
+      // Refresh orders
       fetchOrders();
       
       // Show success message
@@ -348,95 +322,7 @@ export default function Admin({ onNavigate }) {
   }
 
   return (
-    <>
-      {/* New Order Popup Modal */}
-      {newOrderPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-red-600 to-red-800 p-6 rounded-t-2xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">🚨 NEUE BESTELLUNG</h2>
-                  <p className="text-red-100 mt-1">Bestellnummer: {newOrderPopup.ref}</p>
-                </div>
-                <button
-                  onClick={() => setNewOrderPopup(null)}
-                  className="text-white hover:text-red-200 text-2xl font-bold"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              {/* Customer Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-2">👤 Kundeninformationen</h3>
-                <div className="space-y-1 text-sm">
-                  <p><strong>Name:</strong> {newOrderPopup.customer?.name || "Nicht angegeben"}</p>
-                  <p><strong>E-Mail:</strong> {newOrderPopup.customer?.email || "Nicht angegeben"}</p>
-                  <p><strong>Telefon:</strong> {newOrderPopup.customer?.phone || "Nicht angegeben"}</p>
-                  {newOrderPopup.customer?.address && (
-                    <p><strong>Adresse:</strong> {newOrderPopup.customer.address}</p>
-                  )}
-                  {newOrderPopup.customer?.desiredTime && (
-                    <p><strong>Gewünschte Lieferzeit:</strong> {newOrderPopup.customer.desiredTime}</p>
-                  )}
-                  {newOrderPopup.customer?.notes && (
-                    <p className="mt-2 text-gray-600"><strong>Notiz:</strong> {newOrderPopup.customer.notes}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Order Items */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3">🛒 Bestellung</h3>
-                <div className="space-y-2">
-                  {newOrderPopup.items?.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="font-medium">{item.qty}× {item.name}</span>
-                      <span className="text-red-600 font-bold">
-                        €{((item.priceCents * item.qty) / 100).toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 pt-4 border-t-2 border-red-600">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">Gesamtbetrag:</span>
-                    <span className="text-2xl font-bold text-red-600">
-                      €{((newOrderPopup.totals?.grandTotalCents || 0) / 100).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => confirmOrder(newOrderPopup._id)}
-                  disabled={confirmingOrderId === newOrderPopup._id}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {confirmingOrderId === newOrderPopup._id ? "Wird bestätigt..." : "✅ Bestellung bestätigen"}
-                </button>
-                <button
-                  onClick={() => setNewOrderPopup(null)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition-colors"
-                >
-                  Später bearbeiten
-                </button>
-              </div>
-              
-              <p className="text-xs text-gray-500 text-center mt-2">
-                ⚡ Bitte sofort bearbeiten - Der Kunde erhält erst nach Ihrer Bestätigung eine E-Mail
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-amber-200 p-4 sm:p-6 flex justify-center">
+    <div className="bg-amber-200 p-4 sm:p-6 flex justify-center">
         <div className="w-full max-w-6xl bg-white rounded-2xl shadow p-5 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
@@ -523,9 +409,9 @@ export default function Admin({ onNavigate }) {
                       </div>
                     </div>
                     <div className="mt-3 grid gap-2 text-sm text-gray-700">
-                      {order.items.map((item) => (
+                      {order.items.map((item, index) => (
                         <div
-                          key={`${order._id}-${item.itemId}`}
+                          key={`${order._id}-${item.itemId}-${index}`}
                           className="flex justify-between gap-3"
                         >
                           <span>
@@ -886,6 +772,5 @@ export default function Admin({ onNavigate }) {
         )}
       </div>
     </div>
-    </>
   );
 }

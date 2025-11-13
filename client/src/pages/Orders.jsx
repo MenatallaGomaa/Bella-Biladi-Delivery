@@ -381,7 +381,7 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
           </div>
 
           {/* Action Buttons */}
-          {order.status === "on_the_way" && (
+          {order.status !== "delivered" && order.status !== "canceled" && (
             <div className="flex gap-3">
               <a
                 href="tel:+4915213274837"

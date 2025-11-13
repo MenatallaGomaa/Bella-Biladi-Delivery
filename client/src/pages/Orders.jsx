@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { io } from "socket.io-client";
 import { euro } from "../api";
 import { useAuth } from "./AuthContext";
 import { translateStatus } from "../utils/statusTranslations";
 import DriverMap from "../components/DriverMap";
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
 
 export default function Orders({ onNavigate }) {
   const { user } = useAuth();
@@ -23,20 +26,74 @@ export default function Orders({ onNavigate }) {
     
     const token = localStorage.getItem("token");
     if (!token) return;
-    const apiBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
-    fetch(`${apiBase}/api/orders/mine`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => {
+    
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/orders/mine`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
         const ordersList = Array.isArray(data) ? data : [];
         // Remove duplicates based on _id to fix React key warnings
         const uniqueOrders = ordersList.filter((order, index, self) =>
           index === self.findIndex((o) => o._id === order._id)
         );
         setOrders(uniqueOrders);
-      })
-      .catch(() => setOrders([]));
+        
+        // Join WebSocket rooms for all orders after they're loaded
+        if (socketRef.current?.connected) {
+          uniqueOrders.forEach((order) => {
+            socketRef.current.emit("join-order-room", order._id);
+          });
+        }
+      } catch (err) {
+        setOrders([]);
+      }
+    };
+
+    // Set up WebSocket connection for real-time updates
+    if (!socketRef.current) {
+      socketRef.current = io(API_BASE, {
+        transports: ["websocket", "polling"],
+      });
+
+      socketRef.current.on("connect", () => {
+        console.log("✅ WebSocket connected for order updates");
+        // Join rooms for existing orders when connected
+        setOrders((currentOrders) => {
+          currentOrders.forEach((order) => {
+            socketRef.current.emit("join-order-room", order._id);
+          });
+          return currentOrders;
+        });
+      });
+
+      socketRef.current.on("order-status-updated", (data) => {
+        console.log("📦 Order status updated via WebSocket:", data);
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order._id === data.orderId
+              ? { ...order, status: data.status, ...data.order }
+              : order
+          )
+        );
+      });
+
+      socketRef.current.on("disconnect", () => {
+        console.log("🔌 WebSocket disconnected");
+      });
+    }
+
+    // Fetch orders
+    fetchOrders();
+
+    return () => {
+      // Cleanup on unmount
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
   }, [user]);
 
   return (
@@ -116,6 +173,7 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
   const { user } = useAuth();
   const [driverLocation, setDriverLocation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     if (!order || !orderId) {
@@ -131,11 +189,9 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
           setLoading(false);
           return;
         }
-
-        const apiBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
         
         // Fetch driver location for this order
-        const res = await fetch(`${apiBase}/api/orders/${orderId}/driver-location`, {
+        const res = await fetch(`${API_BASE}/api/orders/${orderId}/driver-location`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -155,13 +211,35 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
     };
 
     fetchDriverLocation();
-    
-    // Poll for location updates every 5 seconds for all orders
-    // This ensures both customer and admin see real-time driver location updates
-    const interval = setInterval(fetchDriverLocation, 5000);
+
+    // Set up WebSocket for real-time driver location updates
+    if (!socketRef.current) {
+      socketRef.current = io(API_BASE, {
+        transports: ["websocket", "polling"],
+      });
+
+      socketRef.current.on("connect", () => {
+        console.log("✅ WebSocket connected for driver location");
+        socketRef.current.emit("join-order-room", orderId);
+      });
+
+      socketRef.current.on("driver-location-updated", (data) => {
+        console.log("🚴 Driver location updated via WebSocket:", data);
+        setDriverLocation({
+          latitude: data.latitude,
+          longitude: data.longitude,
+          lastUpdated: data.lastUpdated,
+          driverName: data.driverName,
+        });
+      });
+    }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (socketRef.current) {
+        socketRef.current.emit("leave-order-room", orderId);
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [orderId, order]);
 
@@ -304,12 +382,12 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
           {/* Action Buttons */}
           {order.status === "on_the_way" && (
             <div className="flex gap-3">
-              <button className="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
-                Fahrer anrufen
-              </button>
-              <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg transition-colors">
-                Chat
-              </button>
+              <a
+                href="tel:+4915213274837"
+                className="flex-1 bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-center"
+              >
+                Restaurant anrufen
+              </a>
             </div>
           )}
         </div>

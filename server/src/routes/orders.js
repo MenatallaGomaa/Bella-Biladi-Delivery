@@ -557,6 +557,22 @@ r.patch("/:id", requireAdmin, async (req, res) => {
     { status },
     { new: true }
   );
+  
+  // Emit WebSocket event for order status update
+  const io = req.app.get("io");
+  if (io) {
+    io.to(`order-${order._id}`).emit("order-status-updated", {
+      orderId: order._id,
+      status: order.status,
+      order: order,
+    });
+    // Also emit to all admins/drivers
+    io.emit("order-updated", {
+      orderId: order._id,
+      status: order.status,
+    });
+  }
+  
   res.json(order);
 });
 
@@ -600,6 +616,20 @@ r.post("/:id/confirm", requireAdmin, async (req, res) => {
     // Update order status to accepted
     order.status = "accepted";
     await order.save();
+
+    // Emit WebSocket event for order status update
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`order-${order._id}`).emit("order-status-updated", {
+        orderId: order._id,
+        status: order.status,
+        order: order,
+      });
+      io.emit("order-updated", {
+        orderId: order._id,
+        status: order.status,
+      });
+    }
 
     res.json({
       success: true,

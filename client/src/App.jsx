@@ -13,6 +13,7 @@ import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import Driver from "./pages/Driver";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import "./index.css";
@@ -38,6 +39,7 @@ function MainApp() {
       orders: "Orders",
       profile: "Profile",
       admin: "Admin",
+      driver: "Driver",
       "forgot-password": "ForgotPassword",
       "reset-password": "ResetPassword",
     };
@@ -60,6 +62,7 @@ function MainApp() {
       Orders: "/orders",
       Profile: "/profile",
       Admin: "/admin",
+      Driver: "/driver",
       ForgotPassword: "/forgot-password",
       ResetPassword: (() => {
         const search = window.location.search;
@@ -235,7 +238,8 @@ function MainApp() {
     page === "ResetPassword" ||
     page === "Profile" ||
     page === "Orders" ||
-    page === "Admin";
+    page === "Admin" ||
+    page === "Driver";
 
   const hideFixedCart =
     page === "Checkout" ||
@@ -247,7 +251,8 @@ function MainApp() {
     page === "ResetPassword" ||
     page === "Profile" ||
     page === "Orders" ||
-    page === "Admin";
+    page === "Admin" ||
+    page === "Driver";
 
   // 🧭 Universal navigation handler
   const handleNavigate = (newPage) => {
@@ -259,6 +264,7 @@ function MainApp() {
       "CheckoutLogin",
       "Orders",
       "Profile",
+      "Driver",
     ];
 
     if (protectedPages.includes(newPage) && !user) {
@@ -430,6 +436,9 @@ function MainApp() {
 
         {/* 🛠️ ADMIN */}
         {page === "Admin" && <Admin onNavigate={handleNavigate} />}
+
+        {/* 🚴 DRIVER */}
+        {page === "Driver" && <Driver onNavigate={handleNavigate} />}
       </main>
 
       {/* 🦶 FOOTER */}

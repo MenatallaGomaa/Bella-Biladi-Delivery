@@ -314,7 +314,7 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
                         isCompleted
                           ? "bg-teal-500 text-white"
                           : "bg-gray-200 text-gray-400"
-                      } ${isCurrent ? "ring-2 ring-teal-300 ring-offset-2" : ""}`}
+                      } ${isCurrent ? "ring-2 ring-teal-300 ring-offset-2 animate-pulse" : ""}`}
                     >
                       {isCompleted ? "✓" : stage.icon}
                     </div>

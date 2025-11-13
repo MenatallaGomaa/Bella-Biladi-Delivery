@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
+import { translateStatus } from "../utils/statusTranslations";
+import DriverMap from "../components/DriverMap";
 
 // Normalize API base URL - remove trailing slash to avoid double slashes
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
@@ -65,6 +67,9 @@ export default function Admin({ onNavigate }) {
     imageUrl: "",
   });
   const [itemSearch, setItemSearch] = useState("");
+  const [drivers, setDrivers] = useState([]);
+  const [driversLoading, setDriversLoading] = useState(false);
+  const [driversError, setDriversError] = useState("");
 
   useEffect(() => {
     if (!itemFeedback) return;
@@ -152,6 +157,34 @@ export default function Admin({ onNavigate }) {
       fetchItems();
     }
   }, [activeTab, fetchItems]);
+
+  const fetchDrivers = useCallback(async () => {
+    if (!token || !canAccess) return;
+    try {
+      setDriversLoading(true);
+      setDriversError("");
+      const res = await fetch(`${API_BASE}/api/drivers`, { headers });
+      if (!res.ok) throw new Error("Fahrer konnten nicht geladen werden");
+      const data = await res.json();
+      setDrivers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setDriversError(err.message);
+      setDrivers([]);
+    } finally {
+      setDriversLoading(false);
+    }
+  }, [token, canAccess, headers]);
+
+  useEffect(() => {
+    if (activeTab === "drivers") {
+      fetchDrivers();
+      // Poll for driver location updates every 5 seconds
+      const interval = setInterval(() => {
+        fetchDrivers();
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, fetchDrivers]);
 
   const updateOrderStatus = async (id, newStatus) => {
     if (!token) return;
@@ -358,6 +391,16 @@ export default function Admin({ onNavigate }) {
               >
                 Artikel verwalten
               </button>
+              <button
+                onClick={() => setActiveTab("drivers")}
+                className={`px-3 sm:px-4 py-2 font-medium transition-colors ${
+                  activeTab === "drivers"
+                    ? "bg-amber-400 text-black"
+                    : "bg-white text-gray-700 hover:bg-amber-100"
+                }`}
+              >
+                Fahrer
+              </button>
             </div>
           </div>
         </div>
@@ -450,6 +493,12 @@ export default function Admin({ onNavigate }) {
                             <strong>Hinweis:</strong> {order.customer.notes}
                           </div>
                         )}
+                        <div className="mt-2">
+                          <span className="text-sm font-medium">Status: </span>
+                          <span className="text-sm font-semibold text-amber-600">
+                            {translateStatus(order.status)}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                         {order.status === "new" && (
@@ -462,7 +511,7 @@ export default function Admin({ onNavigate }) {
                           </button>
                         )}
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Status:</span>
+                          <span className="text-sm font-medium">Status ändern:</span>
                           <select
                             value={order.status}
                             onChange={(e) =>
@@ -768,6 +817,78 @@ export default function Admin({ onNavigate }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === "drivers" && (
+          <div className="space-y-5">
+            <h2 className="text-xl font-semibold">Fahrerübersicht</h2>
+            
+            {driversError && (
+              <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg">
+                {driversError}
+              </div>
+            )}
+
+            {driversLoading ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                <p className="mt-2 text-gray-600">Fahrer werden geladen...</p>
+              </div>
+            ) : drivers.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">
+                Keine aktiven Fahrer gefunden.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {drivers.map((driver) => (
+                  <div
+                    key={driver._id}
+                    className="border border-gray-200 rounded-xl p-4 bg-gray-50"
+                  >
+                    <div className="flex flex-col lg:flex-row gap-4">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-2">{driver.name}</h3>
+                        <div className="text-sm text-gray-700 space-y-1">
+                          <p><strong>Telefon:</strong> {driver.phone}</p>
+                          {driver.email && (
+                            <p><strong>E-Mail:</strong> {driver.email}</p>
+                          )}
+                          {driver.currentOrder && (
+                            <p className="text-amber-600">
+                              <strong>Aktuelle Bestellung:</strong> {driver.currentOrder.ref || driver.currentOrder._id}
+                            </p>
+                          )}
+                          {driver.currentLocation?.latitude && (
+                            <p className="text-xs text-gray-500">
+                              <strong>Letzte Aktualisierung:</strong>{" "}
+                              {new Date(driver.currentLocation.lastUpdated).toLocaleString("de-DE")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Always show map - driver starts at restaurant, moves when location available */}
+                      <div className="lg:w-96 h-64 bg-gray-100 rounded-lg overflow-hidden">
+                        <DriverMap
+                          driverLocation={
+                            driver.currentLocation?.latitude && driver.currentLocation?.longitude
+                              ? {
+                                  latitude: driver.currentLocation.latitude,
+                                  longitude: driver.currentLocation.longitude,
+                                  driverName: driver.name,
+                                }
+                              : null
+                          }
+                          orderId={driver._id}
+                          height="256px"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

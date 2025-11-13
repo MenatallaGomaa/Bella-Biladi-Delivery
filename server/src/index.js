@@ -5,14 +5,18 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { createServer } from "http";
+import { Server } from "socket.io";
 import itemsRoutes from "./routes/items.js";
 import ordersRoutes from "./routes/orders.js";
 import authRoutes from "./routes/auth.js";
 import uploadRoutes from "./routes/upload.js";
+import driversRoutes from "./routes/drivers.js";
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 
 // Fix __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -63,9 +67,21 @@ app.use(cors({
 app.use(express.json());
 app.use("/public", express.static(path.join(__dirname, "../public")));
 
+// ✅ WebSocket setup
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGIN?.split(",").map(o => o.trim()).filter(Boolean) || ["http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+  },
+});
+
+// Make io available to routes
+app.set("io", io);
+
 // ✅ API routes
 app.use("/api/items", itemsRoutes);
 app.use("/api/orders", ordersRoutes);
+app.use("/api/drivers", driversRoutes);
 app.use("/api", authRoutes);
 app.use("/api", uploadRoutes);
 
@@ -137,8 +153,29 @@ if (fs.existsSync(clientDistPath)) {
   console.log("⚠️ client/dist not found – skipping static file serving (API-only mode)");
 }
 
+// ✅ WebSocket connection handling
+io.on("connection", (socket) => {
+  console.log("🔌 Client connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("🔌 Client disconnected:", socket.id);
+  });
+
+  // Join room for order updates
+  socket.on("join-order-room", (orderId) => {
+    socket.join(`order-${orderId}`);
+    console.log(`📦 Client ${socket.id} joined order room: order-${orderId}`);
+  });
+
+  // Leave order room
+  socket.on("leave-order-room", (orderId) => {
+    socket.leave(`order-${orderId}`);
+    console.log(`📦 Client ${socket.id} left order room: order-${orderId}`);
+  });
+});
+
 // ✅ Start server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, "0.0.0.0", () =>
+httpServer.listen(PORT, "0.0.0.0", () =>
   console.log(`🚀 Server ready on port ${PORT}`)
 );

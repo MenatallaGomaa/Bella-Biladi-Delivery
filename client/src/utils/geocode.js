@@ -98,4 +98,3 @@ export async function reverseGeocode(latitude, longitude) {
     return null;
   }
 }
-

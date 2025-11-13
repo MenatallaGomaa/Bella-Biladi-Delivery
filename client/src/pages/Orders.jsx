@@ -11,6 +11,7 @@ export default function Orders({ onNavigate }) {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const socketRef = useRef(null);
 
   // Redirect admin users to Admin Dashboard instead of showing order history
   useEffect(() => {

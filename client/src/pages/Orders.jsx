@@ -192,6 +192,7 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
         }
         
         // Fetch driver location for this order
+        // Note: 404 is expected when no driver is assigned, so we handle it silently
         const res = await fetch(`${API_BASE}/api/orders/${orderId}/driver-location`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -201,10 +202,18 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
           setDriverLocation(data);
         } else if (res.status === 404) {
           // No driver assigned yet - will show restaurant location as default
+          // This is expected behavior, silently handle it
+          setDriverLocation(null);
+        } else {
+          // Only log unexpected errors (not 404)
+          console.warn("Driver location fetch returned:", res.status, res.statusText);
           setDriverLocation(null);
         }
       } catch (err) {
-        console.error("Error fetching driver location:", err);
+        // Network errors or other exceptions - only log if not a 404-related error
+        if (!err.message?.includes('404')) {
+          console.warn("Error fetching driver location:", err.message);
+        }
         setDriverLocation(null);
       } finally {
         setLoading(false);
@@ -293,15 +302,15 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
             </div>
             
             {/* Status Stages */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-start justify-between mb-4 gap-1">
               {statusStages.slice(0, 4).map((stage, index) => {
                 const isCompleted = index <= currentStageIndex;
                 const isCurrent = index === currentStageIndex;
                 
                 return (
-                  <div key={stage.key} className="flex flex-col items-center flex-1">
+                  <div key={stage.key} className="flex flex-col items-center flex-1 min-w-0">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${
                         isCompleted
                           ? "bg-teal-500 text-white"
                           : "bg-gray-200 text-gray-400"
@@ -310,7 +319,7 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
                       {isCompleted ? "✓" : stage.icon}
                     </div>
                     <span
-                      className={`text-xs mt-1 text-center ${
+                      className={`text-xs mt-1 text-center whitespace-nowrap ${
                         isCompleted ? "text-teal-600 font-medium" : "text-gray-400"
                       }`}
                     >

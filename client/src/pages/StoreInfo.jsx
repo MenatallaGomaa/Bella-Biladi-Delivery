@@ -3,16 +3,16 @@ import { useState } from "react";
 export default function StoreInfo({ onNavigate }) {
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // Store interior images
+  // Store interior images - using encodeURI to handle spaces in filenames
   const galleryImages = [
-    { id: 1, url: "/store 1 .jpeg", alt: "Bella Biladi Store Interior 1" },
-    { id: 2, url: "/store 2 .jpeg", alt: "Bella Biladi Store Interior 2" },
-    { id: 3, url: "/store 3 .jpeg", alt: "Bella Biladi Store Interior 3" },
-    { id: 4, url: "/store 4 .jpeg", alt: "Bella Biladi Store Interior 4" },
-    { id: 5, url: "/store 5 .jpeg", alt: "Bella Biladi Store Interior 5" },
-    { id: 6, url: "/store 6 .jpeg", alt: "Bella Biladi Store Interior 6" },
-    { id: 7, url: "/store 7.jpeg", alt: "Bella Biladi Store Interior 7" },
-    { id: 8, url: "/store 8 .jpeg", alt: "Bella Biladi Store Interior 8" },
+    { id: 1, url: encodeURI("/store 1 .jpeg"), alt: "Bella Biladi Store Interior 1" },
+    { id: 2, url: encodeURI("/store 2 .jpeg"), alt: "Bella Biladi Store Interior 2" },
+    { id: 3, url: encodeURI("/store 3 .jpeg"), alt: "Bella Biladi Store Interior 3" },
+    { id: 4, url: encodeURI("/store 4 .jpeg"), alt: "Bella Biladi Store Interior 4" },
+    { id: 5, url: encodeURI("/store 5 .jpeg"), alt: "Bella Biladi Store Interior 5" },
+    { id: 6, url: encodeURI("/store 6 .jpeg"), alt: "Bella Biladi Store Interior 6" },
+    { id: 7, url: encodeURI("/store 7.jpeg"), alt: "Bella Biladi Store Interior 7" },
+    { id: 8, url: encodeURI("/store 8 .jpeg"), alt: "Bella Biladi Store Interior 8" },
   ];
 
   // Opening hours
@@ -27,7 +27,7 @@ export default function StoreInfo({ onNavigate }) {
   ];
 
   return (
-    <div className="min-h-screen bg-amber-200 pb-20 sm:pb-16">
+    <div className="min-h-screen bg-amber-200 pb-6">
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -123,7 +123,7 @@ export default function StoreInfo({ onNavigate }) {
                 {galleryImages.map((image) => (
                   <div
                     key={image.id}
-                    className="relative flex-shrink-0 w-64 sm:w-80 h-64 sm:h-80 cursor-pointer group overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300 bg-gray-100"
+                    className="relative flex-shrink-0 w-64 sm:w-80 h-64 sm:h-80 cursor-pointer group overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300"
                     onClick={() => setSelectedImage(image)}
                   >
                     <img
@@ -133,14 +133,14 @@ export default function StoreInfo({ onNavigate }) {
                       loading="lazy"
                       onError={(e) => {
                         console.error(`Failed to load image: ${image.url}`);
-                        e.target.src = '/main.jpeg'; // Fallback image
+                        e.target.style.display = 'none';
+                        const parent = e.target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100 rounded-lg">Bild nicht verfügbar</div>';
+                        }
                       }}
-                      onLoad={(e) => {
-                        e.target.style.opacity = '1';
-                      }}
-                      style={{ opacity: 0, transition: 'opacity 0.3s' }}
                     />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 pointer-events-none bg-black opacity-0 group-hover:opacity-20 transition-opacity flex items-center justify-center">
                       <svg
                         className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                         fill="none"

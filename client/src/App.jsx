@@ -244,7 +244,8 @@ function MainApp() {
     page === "Profile" ||
     page === "Orders" ||
     page === "Admin" ||
-    page === "Driver";
+    page === "Driver" ||
+    page === "StoreInfo";
 
   const hideFixedCart =
     page === "Checkout" ||
@@ -257,7 +258,8 @@ function MainApp() {
     page === "Profile" ||
     page === "Orders" ||
     page === "Admin" ||
-    page === "Driver";
+    page === "Driver" ||
+    page === "StoreInfo";
 
   // 🧭 Universal navigation handler
   const handleNavigate = (newPage) => {

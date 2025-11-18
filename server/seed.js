@@ -653,7 +653,13 @@ const items = [
     await Item.deleteMany({});
     console.log("🗑️ Old items cleared");
 
-    await Item.insertMany(items);
+    // Add order field to each item based on its position in the array
+    const itemsWithOrder = items.map((item, index) => ({
+      ...item,
+      order: index,
+    }));
+
+    await Item.insertMany(itemsWithOrder);
     console.log(`🍕 Inserted ${items.length} items successfully!`);
 
     process.exit(0);

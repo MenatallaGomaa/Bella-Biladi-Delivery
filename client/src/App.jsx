@@ -17,6 +17,7 @@ import Admin from "./pages/Admin";
 import Driver from "./pages/Driver";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import StoreInfo from "./pages/StoreInfo";
 import "./index.css";
 
 function MainApp() {
@@ -43,6 +44,8 @@ function MainApp() {
       driver: "Driver",
       "forgot-password": "ForgotPassword",
       "reset-password": "ResetPassword",
+      "store-info": "StoreInfo",
+      info: "StoreInfo",
     };
     return map[path] || "Home";
   });
@@ -71,6 +74,7 @@ function MainApp() {
           ? `/reset-password${search}`
           : "/reset-password";
       })(),
+      StoreInfo: "/store-info",
     };
     const path = map[page] || "/home";
     window.history.pushState({}, "", path);
@@ -440,6 +444,9 @@ function MainApp() {
 
         {/* 🚴 DRIVER */}
         {page === "Driver" && <Driver onNavigate={handleNavigate} />}
+
+        {/* ℹ️ STORE INFO */}
+        {page === "StoreInfo" && <StoreInfo onNavigate={handleNavigate} />}
       </main>
 
       {/* 🦶 FOOTER */}

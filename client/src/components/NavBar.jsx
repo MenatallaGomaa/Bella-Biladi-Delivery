@@ -31,7 +31,8 @@ export default function NavBar({ activePage, onNavigate }) {
     if (
       (link === "Home" && activePage === "Home") ||
       (link === "Warenkorb" && activePage === "Cart") ||
-      (link === "Kasse" && activePage === "CheckoutPayment")
+      (link === "Kasse" && activePage === "CheckoutPayment") ||
+      (link === "StoreInfo" && activePage === "StoreInfo")
     ) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -49,6 +50,8 @@ export default function NavBar({ activePage, onNavigate }) {
       onNavigate("Cart");
     } else if (link === "Home") {
       onNavigate("Home");
+    } else if (link === "StoreInfo") {
+      onNavigate("StoreInfo");
     }
   };
   
@@ -61,6 +64,8 @@ export default function NavBar({ activePage, onNavigate }) {
       if (user) onNavigate("Orders"); else onNavigate("CheckoutLogin");
     } else if (path === "admin" && user?.role === "admin") {
       onNavigate("Admin");
+    } else if (path === "store-info" || path === "info") {
+      onNavigate("StoreInfo");
     }
   }, [user]);
 
@@ -100,6 +105,19 @@ export default function NavBar({ activePage, onNavigate }) {
                 </span>
               </button>
             ))}
+            {/* Info Icon Button */}
+            <button
+              onClick={() => onNavigate("StoreInfo")}
+              className={`relative flex items-center justify-center text-sm px-3 py-1.5 rounded-full transition-colors ${
+                activePage === "StoreInfo"
+                  ? "bg-amber-400 text-black font-semibold shadow"
+                  : "hover:bg-amber-100 text-gray-700"
+              }`}
+              aria-label="Store Info"
+              title="Store Info"
+            >
+              <img src="/information.png" alt="Info" className="h-6 w-6" />
+            </button>
           </div>
 
           <div className="flex items-center gap-2 relative" ref={dropdownRef}>

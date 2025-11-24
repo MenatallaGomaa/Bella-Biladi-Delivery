@@ -53,6 +53,8 @@ function MainApp() {
   const { addToCart } = useCart();
   const { user, loading } = useAuth();
   const sectionRefs = useRef({});
+  const isUserClickRef = useRef(false); // Track if active change is from user click
+  const activeRef = useRef(active); // Keep ref of active to avoid dependency issues
 
   // 🧭 Sync URL + localStorage
   useEffect(() => {
@@ -137,56 +139,16 @@ function MainApp() {
     fetchItemsWithRetry();
   }, []);
 
-  // 📜 Show/hide scroll to top button and sticky category pills
+  // 📜 Show/hide scroll to top button
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY || document.documentElement.scrollTop;
       setShowScrollTop(scrollPosition > 300); // Show after scrolling 300px
-      
-      // Check if we're near the end of the Pizza section and keep sticky until Desserts
-      if (page === "Home") {
-        const pizzaSection = sectionRefs.current["Pizza"];
-        const dessertsSection = sectionRefs.current["Desserts"];
-        
-        if (pizzaSection) {
-          const pizzaRect = pizzaSection.getBoundingClientRect();
-          const viewportHeight = window.innerHeight;
-          
-          // Show sticky pills when the bottom of Pizza section is visible
-          // and within 400px of the bottom of viewport (near the end, before next section)
-          const threshold = 400;
-          const isPizzaVisible = pizzaRect.bottom > 0; // Pizza section is still visible
-          const isNearEndOfPizza = pizzaRect.bottom < viewportHeight && pizzaRect.bottom > viewportHeight - threshold;
-          
-          // Check if we've reached the Desserts section
-          let hasReachedDesserts = false;
-          if (dessertsSection) {
-            const dessertsRect = dessertsSection.getBoundingClientRect();
-            // If Desserts section top is visible in viewport (within top 50%), we've reached it
-            hasReachedDesserts = dessertsRect.top <= viewportHeight * 0.5;
-          }
-          
-          // Show sticky pills when:
-          // 1. Near end of Pizza section, OR
-          // 2. Past Pizza section but haven't reached Desserts yet
-          const shouldBeSticky = (isPizzaVisible && isNearEndOfPizza) || 
-                                 (pizzaRect.bottom <= 0 && !hasReachedDesserts);
-          
-          setIsCategoryPillsSticky(shouldBeSticky);
-        } else {
-          setIsCategoryPillsSticky(false);
-        }
-      } else {
-        setIsCategoryPillsSticky(false);
-      }
     };
 
-    // Initial check
-    handleScroll();
-    
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [page]);
+  }, []);
 
   // ⬆️ Scroll to top function
   const scrollToTop = () => {
@@ -248,22 +210,103 @@ function MainApp() {
     return m;
   }, [items, categoryMap]);
 
-  // 📜 Smooth scroll when switching tabs
+  // Update activeRef when active changes
   useEffect(() => {
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      const section = sectionRefs.current[active];
-      if (section) {
-        const elementPosition = section.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - 100; // 100px offset for navbar
-        
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: "smooth"
-        });
+    activeRef.current = active;
+  }, [active]);
+
+  // 📜 Sticky category pills and auto-update active tab based on scroll
+  useEffect(() => {
+    if (page !== "Home") {
+      setIsCategoryPillsSticky(false);
+      return;
+    }
+
+    const handleScroll = () => {
+      // Check if Desserts section is visible - if so, hide sticky pills
+      const dessertsSection = sectionRefs.current["Desserts"];
+      if (dessertsSection) {
+        const dessertsRect = dessertsSection.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        // Hide sticky pills when Desserts section top is visible in viewport
+        const hasReachedDesserts = dessertsRect.top <= viewportHeight * 0.3;
+        setIsCategoryPillsSticky(!hasReachedDesserts);
+      } else {
+        // Always sticky if Desserts section doesn't exist yet
+        setIsCategoryPillsSticky(true);
       }
-    }, 150);
-    return () => clearTimeout(timer);
+      
+      // Auto-detect which section is currently most visible and update active tab
+      if (!isUserClickRef.current && categories && categories.length > 0) {
+        const viewportHeight = window.innerHeight;
+        const viewportCenter = viewportHeight / 2;
+        
+        let mostVisibleSection = null;
+        let maxVisibility = 0;
+        
+        // Check each category section to find the most visible one
+        categories.forEach((cat) => {
+          const section = sectionRefs.current[cat];
+          if (section) {
+            const rect = section.getBoundingClientRect();
+            
+            // Calculate how much of the section is visible in viewport
+            const visibleTop = Math.max(rect.top, 0);
+            const visibleBottom = Math.min(rect.bottom, viewportHeight);
+            const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+            
+            // Calculate section center relative to viewport
+            const sectionCenter = (rect.top + rect.bottom) / 2;
+            
+            // Prefer sections that are near the center of viewport and have more visible area
+            const distanceFromCenter = Math.abs(sectionCenter - viewportCenter);
+            const visibilityScore = visibleHeight - distanceFromCenter * 0.1;
+            
+            // Only consider sections that are at least 30% visible
+            if (visibilityScore > maxVisibility && visibleHeight > viewportHeight * 0.3) {
+              maxVisibility = visibilityScore;
+              mostVisibleSection = cat;
+            }
+          }
+        });
+        
+        // Update active tab if a different section is most visible
+        if (mostVisibleSection && mostVisibleSection !== activeRef.current) {
+          activeRef.current = mostVisibleSection;
+          setActive(mostVisibleSection);
+        }
+      }
+    };
+
+    // Initial check
+    handleScroll();
+    
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [page, categories]);
+
+  // 📜 Smooth scroll when switching tabs (only on user click)
+  useEffect(() => {
+    if (isUserClickRef.current) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        const section = sectionRefs.current[active];
+        if (section) {
+          const elementPosition = section.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - 100; // 100px offset for navbar
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth"
+          });
+        }
+        // Reset the flag after scrolling
+        setTimeout(() => {
+          isUserClickRef.current = false;
+        }, 500);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
   }, [active]);
 
   // 🎨 UI visibility logic
@@ -422,7 +465,10 @@ function MainApp() {
                   <CategoryPills
                     tabs={categories}
                     active={active}
-                    onPick={setActive}
+                    onPick={(category) => {
+                      isUserClickRef.current = true;
+                      setActive(category);
+                    }}
                     sticky={isCategoryPillsSticky}
                   />
 

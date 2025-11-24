@@ -243,7 +243,7 @@ const items = [
     description: "Sucuk und Paprika.",
     priceCents: 1000,
     category: "Pizza",
-    imageUrl: "/suzuk.jpeg",
+    imageUrl: "/sucuk.jpeg",
   },
   {
     name: "Pizza Le Gamila",

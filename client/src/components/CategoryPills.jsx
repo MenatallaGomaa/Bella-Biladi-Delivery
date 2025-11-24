@@ -1,6 +1,6 @@
-export default function CategoryPills({ tabs, active, onPick }) {
+export default function CategoryPills({ tabs, active, onPick, sticky = false }) {
   return (
-    <div className="relative mt-6">
+    <div className={`relative mt-6 ${sticky ? 'sticky top-0 z-30 bg-amber-200 pt-4 pb-2 -mx-3 px-3 shadow-md' : ''}`}>
       {/* Horizontal scroll container */}
       <div className="flex overflow-x-auto no-scrollbar gap-3 pb-3 px-1 snap-x snap-mandatory">
         {tabs.map((tab) => (

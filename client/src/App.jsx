@@ -26,6 +26,7 @@ function MainApp() {
   const [itemsError, setItemsError] = useState("");
   const [active, setActive] = useState("Beliebt");
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isCategoryPillsSticky, setIsCategoryPillsSticky] = useState(false);
   const [page, setPage] = useState(() => {
     const saved = localStorage.getItem("currentPage");
     if (saved) return saved;
@@ -136,16 +137,56 @@ function MainApp() {
     fetchItemsWithRetry();
   }, []);
 
-  // 📜 Show/hide scroll to top button
+  // 📜 Show/hide scroll to top button and sticky category pills
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY || document.documentElement.scrollTop;
       setShowScrollTop(scrollPosition > 300); // Show after scrolling 300px
+      
+      // Check if we're near the end of the Pizza section and keep sticky until Desserts
+      if (page === "Home") {
+        const pizzaSection = sectionRefs.current["Pizza"];
+        const dessertsSection = sectionRefs.current["Desserts"];
+        
+        if (pizzaSection) {
+          const pizzaRect = pizzaSection.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+          
+          // Show sticky pills when the bottom of Pizza section is visible
+          // and within 400px of the bottom of viewport (near the end, before next section)
+          const threshold = 400;
+          const isPizzaVisible = pizzaRect.bottom > 0; // Pizza section is still visible
+          const isNearEndOfPizza = pizzaRect.bottom < viewportHeight && pizzaRect.bottom > viewportHeight - threshold;
+          
+          // Check if we've reached the Desserts section
+          let hasReachedDesserts = false;
+          if (dessertsSection) {
+            const dessertsRect = dessertsSection.getBoundingClientRect();
+            // If Desserts section top is visible in viewport (within top 50%), we've reached it
+            hasReachedDesserts = dessertsRect.top <= viewportHeight * 0.5;
+          }
+          
+          // Show sticky pills when:
+          // 1. Near end of Pizza section, OR
+          // 2. Past Pizza section but haven't reached Desserts yet
+          const shouldBeSticky = (isPizzaVisible && isNearEndOfPizza) || 
+                                 (pizzaRect.bottom <= 0 && !hasReachedDesserts);
+          
+          setIsCategoryPillsSticky(shouldBeSticky);
+        } else {
+          setIsCategoryPillsSticky(false);
+        }
+      } else {
+        setIsCategoryPillsSticky(false);
+      }
     };
 
+    // Initial check
+    handleScroll();
+    
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [page]);
 
   // ⬆️ Scroll to top function
   const scrollToTop = () => {
@@ -382,6 +423,7 @@ function MainApp() {
                     tabs={categories}
                     active={active}
                     onPick={setActive}
+                    sticky={isCategoryPillsSticky}
                   />
 
                   {/* Render all categories in order */}

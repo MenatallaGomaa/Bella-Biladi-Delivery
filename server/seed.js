@@ -530,25 +530,11 @@ const items = [
     imageUrl: "/fritz-kola-classic-light.webp",
   },
   {
-    name: "Fritz Bio Kola",
-    description: "Bio-Kola mit 25 mg/100 ml Koffein.",
-    priceCents: 350,
-    category: "drinks",
-    imageUrl: "/fritz-bio-kola.webp",
-  },
-  {
     name: "Fritz Kola Super Zero",
     description: "Zero Zucker, 25 mg/100 ml Koffein.",
     priceCents: 350,
     category: "drinks",
     imageUrl: "/fritz-kola-super-zero.webp",
-  },
-  {
-    name: "Fritz Limo Apfel-Kirsch-Holunder",
-    description: "Erfrischende Limonade mit 23% Fruchtanteil.",
-    priceCents: 350,
-    category: "drinks",
-    imageUrl: "/fritz-limo-apfel-kirsch-holunder.webp",
   },
   {
     name: "Fritz Limo Zitrone",
@@ -572,25 +558,18 @@ const items = [
     imageUrl: "/fritz-limo-orange.webp",
   },
   {
-    name: "Fritz Limo Ingwer-Limette",
-    description: "Würzige Limonade mit 6% Fruchtanteil.",
+    name: "Fritz Anjola Ananas Limette",
+    description: "fritz Anjola Ananas Limette Bio.",
     priceCents: 350,
     category: "drinks",
-    imageUrl: "/fritz-limo-ginger-lime.webp",
-  },
-  {
-    name: "Fritz Bio Traubenschorle",
-    description: "Fruchtige Schorle mit 50% Bio-Direktsaft aus italienischen Trauben.",
-    priceCents: 350,
-    category: "drinks",
-    imageUrl: "/fritz-spritz-organic-grape.webp",
+    imageUrl: "/anjola.png",
   },
   {
     name: "Fritz Mischmasch Kola + Orange",
     description: "Die perfekte Mischung aus Kola und Orange.",
     priceCents: 350,
     category: "drinks",
-    imageUrl: "/fritz-mischmasch-kola-orange.webp",
+    imageUrl: "/mischmasch.png",
   },
   {
     name: "Club Mate",
@@ -600,13 +579,6 @@ const items = [
     imageUrl: "/club-mate.webp",
   },
   {
-    name: "Eis tee",
-    description: "Erfrischender Eistee.",
-    priceCents: 350,
-    category: "drinks",
-    imageUrl: "/eistee.png",
-  },
-  {
     name: "Ayran",
     description: "Erfrischendes türkisches Joghurtgetränk.",
     priceCents: 200,
@@ -614,11 +586,32 @@ const items = [
     imageUrl: "/ayran.png",
   },
   {
+    name: "Fuze Tea Pfirsich",
+    description: "Schwarzer Tee mit Pfirsichgeschmack.",
+    priceCents: 350,
+    category: "drinks",
+    imageUrl: "/Fuze_Tea_Pfirsich.png",
+  },
+  {
+    name: "Fuze Tea Zitrone",
+    description: "Schwarzer Tee mit Zitronengeschmack.",
+    priceCents: 350,
+    category: "drinks",
+    imageUrl: "/Fuze_Tea_Zitrone.png",
+  },
+  {
     name: "Wasser",
     description: "Erfrischendes Mineralwasser.",
     priceCents: 200,
     category: "drinks",
     imageUrl: "/wasser.png",
+  },
+  {
+    name: "Sprudelwasser",
+    description: "Erfrischendes Sprudelwasser.",
+    priceCents: 200,
+    category: "drinks",
+    imageUrl: "/sprudelwasser.png",
   },
 
   // ---------- DESSERTS ----------

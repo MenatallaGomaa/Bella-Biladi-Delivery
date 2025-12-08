@@ -78,6 +78,15 @@ const io = new Server(httpServer, {
 // Make io available to routes
 app.set("io", io);
 
+// ✅ Health check endpoint for keep-alive pings
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // ✅ API routes
 app.use("/api/items", itemsRoutes);
 app.use("/api/orders", ordersRoutes);

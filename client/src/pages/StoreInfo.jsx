@@ -15,15 +15,15 @@ export default function StoreInfo({ onNavigate }) {
     { id: 8, url: encodeURI("/store 8 .jpeg"), alt: "Bella Biladi Store Interior 8" },
   ];
 
-  // Opening hours
+  // Opening hours - Daily from 11:00 to 22:00
   const openingHours = [
     { day: "Montag", hours: "11:00 - 22:00" },
     { day: "Dienstag", hours: "11:00 - 22:00" },
     { day: "Mittwoch", hours: "11:00 - 22:00" },
     { day: "Donnerstag", hours: "11:00 - 22:00" },
-    { day: "Freitag", hours: "11:00 - 23:00" },
-    { day: "Samstag", hours: "11:00 - 23:00" },
-    { day: "Sonntag", hours: "12:00 - 22:00" },
+    { day: "Freitag", hours: "11:00 - 22:00" },
+    { day: "Samstag", hours: "11:00 - 22:00" },
+    { day: "Sonntag", hours: "11:00 - 22:00" },
   ];
 
   return (

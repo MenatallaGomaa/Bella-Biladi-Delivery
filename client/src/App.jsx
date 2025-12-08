@@ -86,21 +86,17 @@ function MainApp() {
     window.history.pushState({}, "", path);
   }, [page]);
 
-  // 📦 Show delivery info popup on first visit
+  // 📦 Show delivery info popup on every page load
   useEffect(() => {
-    const hasSeenPopup = localStorage.getItem("hasSeenDeliveryPopup");
-    if (!hasSeenPopup) {
-      // Show popup after a short delay to let page load
-      const timer = setTimeout(() => {
-        setShowDeliveryPopup(true);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
+    // Show popup after a short delay to let page load
+    const timer = setTimeout(() => {
+      setShowDeliveryPopup(true);
+    }, 1000);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleCloseDeliveryPopup = () => {
     setShowDeliveryPopup(false);
-    localStorage.setItem("hasSeenDeliveryPopup", "true");
   };
 
   // 🔄 Keep-alive ping to prevent backend cold starts (only in production)

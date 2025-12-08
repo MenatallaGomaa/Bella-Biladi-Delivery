@@ -316,19 +316,25 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
                   {DIP_OPTIONS.map((dip) => (
                     <label
                       key={dip.id}
-                      className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors ${
+                      className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors cursor-pointer touch-manipulation ${
                         selectedDip === dip.id
                           ? "border-amber-400 bg-amber-50"
-                          : "border-gray-200 hover:border-amber-200"
+                          : "border-gray-200 hover:border-amber-200 active:bg-amber-50"
                       }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDip(dip.id);
+                      }}
                     >
-                      <span>{dip.label}</span>
+                      <span className="flex-1">{dip.label}</span>
                       <input
                         type="radio"
                         name="dip"
                         checked={selectedDip === dip.id}
                         onChange={() => setSelectedDip(dip.id)}
-                        className="h-4 w-4 text-amber-500 focus:ring-amber-500"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-5 w-5 text-amber-500 focus:ring-amber-500 cursor-pointer touch-manipulation"
+                        style={{ minWidth: '20px', minHeight: '20px' }}
                       />
                     </label>
                   ))}
@@ -343,19 +349,25 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
                   {POMMES_DIP_OPTIONS.map((dip) => (
                     <label
                       key={dip.id}
-                      className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors ${
+                      className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors cursor-pointer touch-manipulation ${
                         selectedDip === dip.id
                           ? "border-amber-400 bg-amber-50"
-                          : "border-gray-200 hover:border-amber-200"
+                          : "border-gray-200 hover:border-amber-200 active:bg-amber-50"
                       }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDip(dip.id);
+                      }}
                     >
-                      <span>{dip.label}</span>
+                      <span className="flex-1">{dip.label}</span>
                       <input
                         type="radio"
                         name="dip"
                         checked={selectedDip === dip.id}
                         onChange={() => setSelectedDip(dip.id)}
-                        className="h-4 w-4 text-amber-500 focus:ring-amber-500"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-5 w-5 text-amber-500 focus:ring-amber-500 cursor-pointer touch-manipulation"
+                        style={{ minWidth: '20px', minHeight: '20px' }}
                       />
                     </label>
                   ))}
@@ -371,19 +383,25 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
                   {POMMES_DIP_OPTIONS.map((dip) => (
                     <label
                       key={dip.id}
-                      className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors ${
+                      className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors cursor-pointer touch-manipulation ${
                         selectedDip === dip.id
                           ? "border-amber-400 bg-amber-50"
-                          : "border-gray-200 hover:border-amber-200"
+                          : "border-gray-200 hover:border-amber-200 active:bg-amber-50"
                       }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDip(dip.id);
+                      }}
                     >
-                      <span>{dip.label}</span>
+                      <span className="flex-1">{dip.label}</span>
                       <input
                         type="radio"
                         name="dip"
                         checked={selectedDip === dip.id}
                         onChange={() => setSelectedDip(dip.id)}
-                        className="h-4 w-4 text-amber-500 focus:ring-amber-500"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-5 w-5 text-amber-500 focus:ring-amber-500 cursor-pointer touch-manipulation"
+                        style={{ minWidth: '20px', minHeight: '20px' }}
                       />
                     </label>
                   ))}
@@ -399,19 +417,25 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
                     {CHEESE_OPTIONS.map((cheese) => (
                       <label
                         key={cheese.id}
-                        className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors ${
+                        className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors cursor-pointer touch-manipulation ${
                           selectedCheese === cheese.id
                             ? "border-amber-400 bg-amber-50"
-                            : "border-gray-200 hover:border-amber-200"
+                            : "border-gray-200 hover:border-amber-200 active:bg-amber-50"
                         }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCheese(cheese.id);
+                        }}
                       >
-                        <span>{cheese.label}</span>
+                        <span className="flex-1">{cheese.label}</span>
                         <input
                           type="radio"
                           name="cheese"
                           checked={selectedCheese === cheese.id}
                           onChange={() => setSelectedCheese(cheese.id)}
-                          className="h-4 w-4 text-amber-500 focus:ring-amber-500"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-5 w-5 text-amber-500 focus:ring-amber-500 cursor-pointer touch-manipulation"
+                          style={{ minWidth: '20px', minHeight: '20px' }}
                         />
                       </label>
                     ))}

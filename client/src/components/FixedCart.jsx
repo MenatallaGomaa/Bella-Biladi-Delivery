@@ -64,8 +64,16 @@ export default function FixedCart({ onNavigate }) {
       {/* Transparent backdrop - closes cart when clicked, prevents item clicks */}
       {isExpanded && (
         <div
-          className="fixed inset-0 z-40 bg-transparent"
+          className="fixed inset-0 z-40 bg-black/20"
           onClick={() => setIsExpanded(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 40
+          }}
         />
       )}
 
@@ -73,6 +81,13 @@ export default function FixedCart({ onNavigate }) {
         className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-amber-400 shadow-2xl transition-all duration-300 ${
           isExpanded ? "h-[70vh] sm:h-[60vh]" : "h-16"
         }`}
+        style={{ 
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50
+        }}
       >
         {/* Cart Header - Always Visible */}
         <div

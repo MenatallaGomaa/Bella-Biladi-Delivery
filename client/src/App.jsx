@@ -18,6 +18,8 @@ import Driver from "./pages/Driver";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import StoreInfo from "./pages/StoreInfo";
+import { getApiBaseUrl, createApiUrl } from "./utils/apiUrl.js";
+import DeliveryInfoPopup from "./components/DeliveryInfoPopup";
 import "./index.css";
 
 function MainApp() {
@@ -55,6 +57,7 @@ function MainApp() {
   const sectionRefs = useRef({});
   const isUserClickRef = useRef(false); // Track if active change is from user click
   const activeRef = useRef(active); // Keep ref of active to avoid dependency issues
+  const [showDeliveryPopup, setShowDeliveryPopup] = useState(false);
 
   // 🧭 Sync URL + localStorage
   useEffect(() => {
@@ -83,6 +86,78 @@ function MainApp() {
     window.history.pushState({}, "", path);
   }, [page]);
 
+  // 📦 Show delivery info popup on first visit
+  useEffect(() => {
+    const hasSeenPopup = localStorage.getItem("hasSeenDeliveryPopup");
+    if (!hasSeenPopup) {
+      // Show popup after a short delay to let page load
+      const timer = setTimeout(() => {
+        setShowDeliveryPopup(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleCloseDeliveryPopup = () => {
+    setShowDeliveryPopup(false);
+    localStorage.setItem("hasSeenDeliveryPopup", "true");
+  };
+
+  // 🔄 Keep-alive ping to prevent backend cold starts (only in production)
+  useEffect(() => {
+    // Only ping in production (not localhost)
+    const apiBase = getApiBaseUrl();
+    const isProduction = !apiBase.includes("localhost") && !apiBase.includes("127.0.0.1");
+    
+    if (!isProduction) {
+      return; // Skip keep-alive in development
+    }
+    
+    const PING_INTERVAL = 9 * 60 * 1000; // 9 minutes (less than Render's 15 min timeout)
+    const healthUrl = createApiUrl(apiBase, "/api/health");
+    
+    console.log("🔄 Client-side keep-alive ping started");
+    
+    const pingBackend = async () => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(healthUrl, {
+          method: "GET",
+          signal: controller.signal,
+          headers: {
+            "User-Agent": "BellaBiladi-Client/1.0"
+          }
+        });
+        
+        clearTimeout(timeout);
+        
+        if (response.ok) {
+          console.log("✅ Keep-alive ping successful");
+        } else {
+          console.warn("⚠️ Keep-alive ping failed:", response.status);
+        }
+      } catch (error) {
+        // Silently fail - don't spam console with keep-alive errors
+        if (error.name !== "AbortError") {
+          console.debug("Keep-alive ping error:", error.message);
+        }
+      }
+    };
+    
+    // Initial ping after 30 seconds (give backend time to wake up if needed)
+    const initialTimeout = setTimeout(pingBackend, 30000);
+    
+    // Then ping every 9 minutes
+    const intervalId = setInterval(pingBackend, PING_INTERVAL);
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(intervalId);
+    };
+  }, []);
+
   // 🍕 Fetch menu items with retry logic for cold starts
   useEffect(() => {
     let retryCount = 0;
@@ -94,23 +169,24 @@ function MainApp() {
       setItemsError("");
       
       const attemptFetch = async (attemptNumber) => {
+        let timeoutId = null;
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per attempt
+          timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per attempt
           
           const response = await api.get("/api/items", {
             signal: controller.signal,
             timeout: 15000,
           });
           
-          clearTimeout(timeoutId);
+          if (timeoutId) clearTimeout(timeoutId);
           setItems(response.data || []);
           setItemsLoading(false);
           setItemsError("");
           console.log("✅ Items loaded successfully");
           return true; // Success
         } catch (err) {
-          clearTimeout(timeoutId);
+          if (timeoutId) clearTimeout(timeoutId);
           
           if (attemptNumber < maxRetries) {
             const delay = baseDelay * Math.pow(2, attemptNumber); // Exponential backoff
@@ -667,6 +743,11 @@ function MainApp() {
 
       {/* 🔔 Admin Order Notification - Global popup for new orders */}
       <AdminOrderNotification onNavigate={handleNavigate} />
+
+      {/* 📦 Delivery Info Popup */}
+      {showDeliveryPopup && (
+        <DeliveryInfoPopup onClose={handleCloseDeliveryPopup} />
+      )}
     </div>
   );
 }

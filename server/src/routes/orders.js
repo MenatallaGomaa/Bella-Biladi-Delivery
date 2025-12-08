@@ -603,21 +603,11 @@ r.post("/:id/confirm", requireAdmin, async (req, res) => {
     const subtotal = order.totals.subtotalCents || 0;
     const total = order.totals.grandTotalCents || subtotal;
 
-    // Send customer confirmation email
-    const emailResult = await sendCustomerConfirmation(
-      order,
-      order.items,
-      order.customer,
-      user,
-      subtotal,
-      total
-    );
-
-    // Update order status to accepted
+    // Update order status to accepted FIRST (for immediate UI update)
     order.status = "accepted";
     await order.save();
 
-    // Emit WebSocket event for order status update
+    // Emit WebSocket event for order status update IMMEDIATELY
     const io = req.app.get("io");
     if (io) {
       io.to(`order-${order._id}`).emit("order-status-updated", {
@@ -631,11 +621,29 @@ r.post("/:id/confirm", requireAdmin, async (req, res) => {
       });
     }
 
+    // Send response immediately (don't wait for email)
     res.json({
       success: true,
-      message: "Order confirmed and customer email sent",
-      emailSent: emailResult.success,
+      message: "Order confirmed. Customer email is being sent.",
       order,
+    });
+
+    // Send customer confirmation email ASYNCHRONOUSLY (non-blocking)
+    sendCustomerConfirmation(
+      order,
+      order.items,
+      order.customer,
+      user,
+      subtotal,
+      total
+    ).then((emailResult) => {
+      if (emailResult.success) {
+        console.log(`✅ Confirmation email sent to ${order.customer.email}`);
+      } else {
+        console.error(`❌ Failed to send confirmation email to ${order.customer.email}:`, emailResult.error);
+      }
+    }).catch((err) => {
+      console.error(`❌ Error sending confirmation email to ${order.customer.email}:`, err.message);
     });
   } catch (err) {
     console.error("❌ Error confirming order:", err);

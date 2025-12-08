@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { translateStatus } from "../utils/statusTranslations";
 import DriverMap from "../components/DriverMap";
+import { io } from "socket.io-client";
 
 // Normalize API base URL - remove trailing slash to avoid double slashes
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
@@ -70,6 +71,7 @@ export default function Admin({ onNavigate }) {
   const [drivers, setDrivers] = useState([]);
   const [driversLoading, setDriversLoading] = useState(false);
   const [driversError, setDriversError] = useState("");
+  const socketRef = useRef(null);
 
   useEffect(() => {
     if (!itemFeedback) return;
@@ -141,7 +143,75 @@ export default function Admin({ onNavigate }) {
     }
   }, [activeTab, fetchOrders]);
 
-  // Poll for new orders every 5 seconds when on orders tab
+  // Set up WebSocket connection for real-time order updates
+  useEffect(() => {
+    if (!canAccess || activeTab !== "orders") return;
+
+    // Set up WebSocket connection for real-time updates
+    if (!socketRef.current) {
+      socketRef.current = io(API_BASE, {
+        transports: ["websocket", "polling"],
+      });
+
+      socketRef.current.on("connect", () => {
+        console.log("✅ WebSocket connected for admin order updates");
+        // Join rooms for existing orders when connected
+        setOrders((currentOrders) => {
+          currentOrders.forEach((order) => {
+            socketRef.current.emit("join-order-room", order._id);
+          });
+          return currentOrders;
+        });
+      });
+
+      socketRef.current.on("order-status-updated", (data) => {
+        console.log("📦 Order status updated via WebSocket:", data);
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order._id === data.orderId
+              ? { ...order, status: data.status, ...data.order }
+              : order
+          )
+        );
+      });
+
+      socketRef.current.on("order-updated", (data) => {
+        console.log("📦 Order updated via WebSocket:", data);
+        // Refresh orders list when any order is updated
+        fetchOrders(true);
+      });
+
+      socketRef.current.on("disconnect", () => {
+        console.log("🔌 WebSocket disconnected");
+      });
+    }
+
+    // Join rooms for new orders when orders list changes
+    if (socketRef.current?.connected && orders.length > 0) {
+      orders.forEach((order) => {
+        socketRef.current.emit("join-order-room", order._id);
+      });
+    }
+
+    return () => {
+      // Don't disconnect on tab change, only on unmount
+      if (activeTab !== "orders" && socketRef.current) {
+        // Keep connection but don't clean up yet
+      }
+    };
+  }, [canAccess, activeTab, orders.length]);
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
+
+  // Poll for new orders every 5 seconds when on orders tab (fallback)
   useEffect(() => {
     if (!canAccess || activeTab !== "orders") return;
     
@@ -201,6 +271,13 @@ export default function Admin({ onNavigate }) {
     try {
       setConfirmingOrderId(orderId);
       
+      // Optimistically update the order status in the UI immediately
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order._id === orderId ? { ...order, status: "accepted" } : order
+        )
+      );
+      
       const res = await fetch(`${API_BASE}/api/orders/${orderId}/confirm`, {
         method: "POST",
         headers,
@@ -208,12 +285,19 @@ export default function Admin({ onNavigate }) {
       if (!res.ok) throw new Error("Bestätigung fehlgeschlagen");
       const data = await res.json();
       
-      // Refresh orders
-      fetchOrders();
+      // Orders are updated via WebSocket immediately, but refresh to ensure consistency
+      // The optimistic update already happened, so this is just a safety refresh
+      setTimeout(() => {
+        fetchOrders(true);
+      }, 500);
       
-      // Show success message
-      alert("Bestellung bestätigt! Der Kunde hat eine Bestätigungs-E-Mail erhalten.");
+      // Show success message (non-blocking, delayed slightly to let UI update first)
+      setTimeout(() => {
+        alert("Bestellung bestätigt! Der Kunde erhält eine Bestätigungs-E-Mail.");
+      }, 300);
     } catch (err) {
+      // Revert optimistic update on error
+      fetchOrders();
       alert(`Fehler: ${err.message}`);
     } finally {
       setConfirmingOrderId(null);

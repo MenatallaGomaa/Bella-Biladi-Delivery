@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { useCart } from "./CartContext";
-import { reverseGeocode } from "../utils/geocode";
+import { reverseGeocode, geocodeAddress } from "../utils/geocode";
+import { calculateDeliveryFee, getDeliveryFeeDescription, calculateDistance } from "../utils/deliveryFee";
+import { RESTAURANT_LOCATION } from "../utils/restaurantLocation";
+import DeliveryInfoPopup from "../components/DeliveryInfoPopup";
 
 import userIcon from "/public/user.png";
 import homeIcon from "/public/home.png";
@@ -73,6 +76,20 @@ export default function CheckoutPayment({ onNavigate }) {
 
   const redirectTimeoutRef = useRef(null);
 
+  // State declarations - must be before useMemo hooks that use them
+  const [editing, setEditing] = useState(null);
+  const [showItems, setShowItems] = useState(false);
+  const [availableAddresses, setAvailableAddresses] = useState([]);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [confirmation, setConfirmation] = useState(null);
+  const [validationAttempted, setValidationAttempted] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [locationError, setLocationError] = useState("");
+  const [showDeliveryPopup, setShowDeliveryPopup] = useState(false);
+  const [deliveryFeeInfo, setDeliveryFeeInfo] = useState({ feeCents: 0, eligible: true, distanceKm: 0 });
+
   const grouped = useMemo(() => {
     const map = new Map();
     cart.forEach((item) => {
@@ -94,19 +111,14 @@ export default function CheckoutPayment({ onNavigate }) {
       grouped.reduce((sum, item) => sum + (item.priceCents * item.qty) / 100, 0),
     [grouped]
   );
-  const delivery = 0;
+  
+  const subtotalCents = useMemo(
+    () => grouped.reduce((sum, item) => sum + item.priceCents * item.qty, 0),
+    [grouped]
+  );
+  
+  const delivery = useMemo(() => deliveryFeeInfo.feeCents / 100, [deliveryFeeInfo.feeCents]);
   const total = subtotal + delivery;
-
-  const [editing, setEditing] = useState(null);
-  const [showItems, setShowItems] = useState(false);
-  const [availableAddresses, setAvailableAddresses] = useState([]);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [confirmation, setConfirmation] = useState(null);
-  const [validationAttempted, setValidationAttempted] = useState(false);
-  const [gettingLocation, setGettingLocation] = useState(false);
-  const [locationError, setLocationError] = useState("");
 
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -173,6 +185,49 @@ export default function CheckoutPayment({ onNavigate }) {
         clearTimeout(redirectTimeoutRef.current);
       }
     };
+  }, []);
+
+  // Calculate delivery fee when address changes
+  useEffect(() => {
+    async function calculateFee() {
+      if (!form.street || !form.postalCity) {
+        setDeliveryFeeInfo({ feeCents: 0, eligible: true, distanceKm: 0 });
+        return;
+      }
+
+      try {
+        const fullAddress = `${form.street}, ${form.postalCity}, Leipzig, Germany`;
+        const coords = await geocodeAddress(fullAddress);
+        
+        if (coords) {
+          const distanceKm = calculateDistance(
+            RESTAURANT_LOCATION.latitude,
+            RESTAURANT_LOCATION.longitude,
+            coords.latitude,
+            coords.longitude
+          );
+          
+          const feeInfo = calculateDeliveryFee(distanceKm, subtotalCents);
+          setDeliveryFeeInfo({ ...feeInfo, distanceKm });
+        } else {
+          // If geocoding fails, set default fee
+          setDeliveryFeeInfo({ feeCents: 0, eligible: true, distanceKm: 0 });
+        }
+      } catch (error) {
+        console.error("Error calculating delivery fee:", error);
+        setDeliveryFeeInfo({ feeCents: 0, eligible: true, distanceKm: 0 });
+      }
+    }
+
+    calculateFee();
+  }, [form.street, form.postalCity, subtotalCents]);
+
+  // Show delivery popup when entering checkout
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowDeliveryPopup(true);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -357,6 +412,15 @@ export default function CheckoutPayment({ onNavigate }) {
       return;
     }
 
+    // Validate delivery eligibility
+    if (!deliveryFeeInfo.eligible) {
+      setSubmitError(
+        deliveryFeeInfo.reason || "Lieferung für diese Adresse nicht möglich."
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     // First, validate that all items still exist in the database
     try {
       const itemsRes = await fetch(`${API_BASE}/api/items`);
@@ -421,6 +485,10 @@ export default function CheckoutPayment({ onNavigate }) {
           typeof form.time === "object" ? form.time.label : form.time,
       },
       notes: form.comment.trim(),
+      deliveryFee: deliveryFeeInfo.feeCents,
+      distanceKm: deliveryFeeInfo.distanceKm,
+      subtotal: subtotalCents,
+      total: Math.round(total * 100), // Convert to cents
     };
 
     const headers = {
@@ -657,9 +725,32 @@ export default function CheckoutPayment({ onNavigate }) {
               <span>{subtotal.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between">
-              <span>Lieferkosten</span>
-              <span>{delivery.toFixed(2)} €</span>
+              <div className="flex items-center gap-2">
+                <span>Lieferkosten</span>
+                <button
+                  onClick={() => setShowDeliveryPopup(true)}
+                  className="text-blue-600 hover:text-blue-800 underline text-xs"
+                  type="button"
+                >
+                  Info
+                </button>
+              </div>
+              <div className="text-right">
+                <span className={deliveryFeeInfo.eligible ? "" : "text-red-600"}>
+                  {delivery.toFixed(2)} €
+                </span>
+                {deliveryFeeInfo.distanceKm > 0 && (
+                  <div className="text-xs text-gray-500">
+                    ({deliveryFeeInfo.distanceKm.toFixed(1)} km)
+                  </div>
+                )}
+              </div>
             </div>
+            {!deliveryFeeInfo.eligible && deliveryFeeInfo.reason && (
+              <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+                ⚠️ {deliveryFeeInfo.reason}
+              </div>
+            )}
             <hr className="my-2" />
             <div className="flex justify-between font-semibold text-lg">
               <span>Gesamt</span>
@@ -1213,6 +1304,14 @@ export default function CheckoutPayment({ onNavigate }) {
             )}
           </div>
         </div>
+      )}
+
+      {/* Delivery Info Popup */}
+      {showDeliveryPopup && (
+        <DeliveryInfoPopup
+          onClose={() => setShowDeliveryPopup(false)}
+          showAtCheckout={true}
+        />
       )}
     </div>
   );

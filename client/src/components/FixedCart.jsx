@@ -7,6 +7,7 @@ export default function FixedCart({ onNavigate }) {
   const { user } = useAuth();
   const [deliveryMode, setDeliveryMode] = useState("Lieferung");
   const hasAutoExpandedRef = useRef(false);
+  const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 0);
   
   // Sync local state with context
   const isExpanded = isCartExpanded;
@@ -27,6 +28,36 @@ export default function FixedCart({ onNavigate }) {
       setIsExpanded(false);
     }
   }, [cart.length]);
+
+  // Handle mobile browser UI bars (address bar, navigation bar) that show/hide
+  useEffect(() => {
+    const updateViewportHeight = () => {
+      // Use visual viewport if available (better for mobile browsers)
+      const height = window.visualViewport?.height || window.innerHeight;
+      setViewportHeight(height);
+    };
+
+    // Update on resize and visual viewport changes
+    window.addEventListener('resize', updateViewportHeight);
+    window.addEventListener('orientationchange', updateViewportHeight);
+    
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateViewportHeight);
+      window.visualViewport.addEventListener('scroll', updateViewportHeight);
+    }
+
+    // Initial update
+    updateViewportHeight();
+
+    return () => {
+      window.removeEventListener('resize', updateViewportHeight);
+      window.removeEventListener('orientationchange', updateViewportHeight);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateViewportHeight);
+        window.visualViewport.removeEventListener('scroll', updateViewportHeight);
+      }
+    };
+  }, []);
 
   const total = cart.reduce((sum, item) => sum + item.priceCents, 0) / 100;
 
@@ -78,15 +109,22 @@ export default function FixedCart({ onNavigate }) {
       )}
 
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-amber-400 shadow-2xl transition-all duration-300 ${
-          isExpanded ? "h-[70vh] sm:h-[60vh]" : "h-16"
+        className={`fixed left-0 right-0 z-50 bg-white border-t-2 border-amber-400 shadow-2xl transition-all duration-300 ${
+          isExpanded ? "" : ""
         }`}
         style={{ 
           position: 'fixed',
           bottom: 0,
           left: 0,
           right: 0,
-          zIndex: 50
+          zIndex: 50,
+          height: isExpanded 
+            ? `${Math.min(viewportHeight * 0.7, window.innerHeight * 0.7)}px` 
+            : '64px',
+          maxHeight: isExpanded ? '70vh' : 'none',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          transform: 'translateZ(0)', // Force hardware acceleration
+          WebkitTransform: 'translateZ(0)'
         }}
       >
         {/* Cart Header - Always Visible */}
@@ -124,7 +162,10 @@ export default function FixedCart({ onNavigate }) {
 
       {/* Cart Content - Expandable */}
       {isExpanded && (
-        <div className="flex flex-col h-[calc(100%-4rem)] overflow-hidden">
+        <div 
+          className="flex flex-col overflow-hidden"
+          style={{ height: `calc(${Math.min(viewportHeight * 0.7, 600)}px - 4rem)` }}
+        >
           {/* Delivery / Pickup toggle */}
           <div className="flex justify-center gap-2 px-4 py-3 border-b bg-white">
             <button

@@ -143,14 +143,25 @@ export default function CheckoutPayment({ onNavigate }) {
 
       try {
         const res = await fetch(`${API_BASE}/api/items`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          // If API fails, don't show error - items might still be valid
+          setCartValidationError("");
+          return;
+        }
         
         const allItems = await res.json();
         const validItemIds = new Set(allItems.map(item => String(item._id)));
         
         const invalidItems = cart.filter(item => {
-          const itemId = item._id || item.id;
-          return itemId && !validItemIds.has(String(itemId));
+          // Check baseItemId first (for customized items), then _id, then id
+          const itemId = item.baseItemId || item._id || item.id;
+          if (!itemId) {
+            // If no ID at all, consider it invalid only if it also has no name
+            return !item.name;
+          }
+          // Try both string and original format comparison
+          const itemIdStr = String(itemId);
+          return !validItemIds.has(itemIdStr);
         });
 
         if (invalidItems.length > 0) {
@@ -162,10 +173,15 @@ export default function CheckoutPayment({ onNavigate }) {
         }
       } catch (err) {
         console.warn("Could not validate cart items:", err);
+        // Don't show error if validation fails - assume items are valid
+        setCartValidationError("");
       }
     }
 
-    validateCartItems();
+    // Only validate if cart has items
+    if (cart.length > 0) {
+      validateCartItems();
+    }
   }, [cart]);
 
   useEffect(() => {
@@ -189,6 +205,11 @@ export default function CheckoutPayment({ onNavigate }) {
 
   // Calculate delivery fee when address changes
   useEffect(() => {
+    // Don't calculate delivery fee if order is already confirmed
+    if (confirmation) {
+      return;
+    }
+
     async function calculateFee() {
       if (!form.street || !form.postalCity) {
         setDeliveryFeeInfo({ feeCents: 0, eligible: true, distanceKm: 0 });
@@ -196,10 +217,24 @@ export default function CheckoutPayment({ onNavigate }) {
       }
 
       try {
-        const fullAddress = `${form.street}, ${form.postalCity}, Leipzig, Germany`;
+        // Construct address - if postalCity already contains city, don't duplicate
+        let fullAddress = form.street;
+        if (form.postalCity) {
+          // Check if postalCity already contains Leipzig
+          if (!form.postalCity.toLowerCase().includes('leipzig')) {
+            fullAddress = `${form.street}, ${form.postalCity}, Leipzig, Germany`;
+          } else {
+            fullAddress = `${form.street}, ${form.postalCity}, Germany`;
+          }
+        } else {
+          fullAddress = `${form.street}, Leipzig, Germany`;
+        }
+        
+        console.log("📍 Calculating delivery fee for address:", fullAddress);
         const coords = await geocodeAddress(fullAddress);
         
         if (coords) {
+          console.log("📍 Geocoded coordinates:", coords);
           const distanceKm = calculateDistance(
             RESTAURANT_LOCATION.latitude,
             RESTAURANT_LOCATION.longitude,
@@ -207,28 +242,39 @@ export default function CheckoutPayment({ onNavigate }) {
             coords.longitude
           );
           
+          console.log("📍 Calculated distance:", distanceKm, "km");
           const feeInfo = calculateDeliveryFee(distanceKm, subtotalCents);
+          console.log("📍 Delivery fee info:", feeInfo);
           setDeliveryFeeInfo({ ...feeInfo, distanceKm });
         } else {
-          // If geocoding fails, set default fee
-          setDeliveryFeeInfo({ feeCents: 0, eligible: true, distanceKm: 0 });
+          console.warn("⚠️ Geocoding failed for address:", fullAddress);
+          // If geocoding fails, set default fee but mark as ineligible
+          setDeliveryFeeInfo({ 
+            feeCents: 0, 
+            eligible: false, 
+            distanceKm: 0,
+            reason: "Adresse konnte nicht gefunden werden. Bitte überprüfen Sie die Adresse."
+          });
         }
       } catch (error) {
-        console.error("Error calculating delivery fee:", error);
-        setDeliveryFeeInfo({ feeCents: 0, eligible: true, distanceKm: 0 });
+        console.error("❌ Error calculating delivery fee:", error);
+        setDeliveryFeeInfo({ 
+          feeCents: 0, 
+          eligible: false, 
+          distanceKm: 0,
+          reason: "Fehler bei der Berechnung der Lieferkosten. Bitte versuchen Sie es erneut."
+        });
       }
     }
 
-    calculateFee();
-  }, [form.street, form.postalCity, subtotalCents]);
-
-  // Show delivery popup when entering checkout
-  useEffect(() => {
+    // Add a small delay to avoid too many API calls while typing
     const timer = setTimeout(() => {
-      setShowDeliveryPopup(true);
+      calculateFee();
     }, 500);
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [form.street, form.postalCity, subtotalCents, confirmation]);
+
 
   useEffect(() => {
     let ignore = false;
@@ -412,6 +458,17 @@ export default function CheckoutPayment({ onNavigate }) {
       return;
     }
 
+    // Validate minimum order amount (20€)
+    const MINIMUM_ORDER_AMOUNT = 20.0;
+    if (subtotal < MINIMUM_ORDER_AMOUNT) {
+      const remaining = (MINIMUM_ORDER_AMOUNT - subtotal).toFixed(2);
+      setSubmitError(
+        `Mindestbestellwert nicht erreicht. Bitte füge noch Artikel im Wert von ${remaining} € hinzu. (Mindestbestellwert: ${MINIMUM_ORDER_AMOUNT.toFixed(2)} €)`
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     // Validate delivery eligibility
     if (!deliveryFeeInfo.eligible) {
       setSubmitError(
@@ -429,8 +486,11 @@ export default function CheckoutPayment({ onNavigate }) {
       const validItemIds = new Set(allItems.map(item => String(item._id)));
       
       const invalidItems = grouped.filter(item => {
-        const itemId = item._id || item.id;
-        return !itemId || !validItemIds.has(String(itemId));
+        const itemId = item._id || item.id || item.baseItemId;
+        if (!itemId) return true;
+        // Try both string and original format comparison
+        const itemIdStr = String(itemId);
+        return !validItemIds.has(itemIdStr);
       });
 
       if (invalidItems.length > 0) {
@@ -539,6 +599,8 @@ export default function CheckoutPayment({ onNavigate }) {
       }
 
       clearCart();
+      setSubmitError(""); // Clear any errors when order is successful
+      setCartValidationError(""); // Clear cart validation errors
       setConfirmation({
         ref: data.ref,
         total,
@@ -722,8 +784,15 @@ export default function CheckoutPayment({ onNavigate }) {
 
             <div className="flex justify-between mt-4">
               <span>Zwischensumme</span>
-              <span>{subtotal.toFixed(2)} €</span>
+              <span className={subtotal < 20 ? "text-red-600 font-semibold" : ""}>
+                {subtotal.toFixed(2)} €
+              </span>
             </div>
+            {subtotal < 20 && !confirmation && (
+              <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+                ⚠️ Mindestbestellwert: 20,00 € (noch {(20 - subtotal).toFixed(2)} € fehlen)
+              </div>
+            )}
             <div className="flex justify-between">
               <div className="flex items-center gap-2">
                 <span>Lieferkosten</span>
@@ -736,7 +805,7 @@ export default function CheckoutPayment({ onNavigate }) {
                 </button>
               </div>
               <div className="text-right">
-                <span className={deliveryFeeInfo.eligible ? "" : "text-red-600"}>
+                <span className={deliveryFeeInfo.eligible || confirmation ? "" : "text-red-600"}>
                   {delivery.toFixed(2)} €
                 </span>
                 {deliveryFeeInfo.distanceKm > 0 && (
@@ -746,7 +815,7 @@ export default function CheckoutPayment({ onNavigate }) {
                 )}
               </div>
             </div>
-            {!deliveryFeeInfo.eligible && deliveryFeeInfo.reason && (
+            {!deliveryFeeInfo.eligible && deliveryFeeInfo.reason && !confirmation && (
               <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
                 ⚠️ {deliveryFeeInfo.reason}
               </div>
@@ -758,7 +827,7 @@ export default function CheckoutPayment({ onNavigate }) {
             </div>
           </div>
 
-          {cartValidationError && (
+          {cartValidationError && !confirmation && (
             <div className="mt-4 bg-yellow-100 border border-yellow-300 text-yellow-800 text-xs sm:text-sm px-3 py-2 rounded">
               <div className="flex items-start gap-2">
                 <svg
@@ -792,7 +861,7 @@ export default function CheckoutPayment({ onNavigate }) {
             </div>
           )}
 
-          {submitError && (
+          {submitError && !confirmation && (
             <div className="mt-4 bg-red-100 border border-red-300 text-red-700 text-xs sm:text-sm px-3 py-2 rounded">
               {submitError}
             </div>
@@ -838,11 +907,16 @@ export default function CheckoutPayment({ onNavigate }) {
 
           <button
             onClick={handleOrderSubmit}
-            disabled={submitting || cart.length === 0}
+            disabled={submitting || cart.length === 0 || subtotal < 20}
             className="mt-6 w-full bg-amber-400 py-3 rounded-lg font-semibold hover:bg-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {submitting ? "Bestellung wird gesendet…" : "Bestellen & Bezahlen"}
           </button>
+          {subtotal < 20 && !confirmation && (
+            <p className="mt-2 text-xs text-center text-red-600">
+              Mindestbestellwert von 20,00 € nicht erreicht
+            </p>
+          )}
         </div>
       </div>
 
@@ -1306,10 +1380,9 @@ export default function CheckoutPayment({ onNavigate }) {
         </div>
       )}
 
-      {/* Delivery Info Popup */}
       {showDeliveryPopup && (
-        <DeliveryInfoPopup
-          onClose={() => setShowDeliveryPopup(false)}
+        <DeliveryInfoPopup 
+          onClose={() => setShowDeliveryPopup(false)} 
           showAtCheckout={true}
         />
       )}

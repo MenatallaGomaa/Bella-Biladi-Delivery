@@ -18,6 +18,9 @@ import Driver from "./pages/Driver";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import StoreInfo from "./pages/StoreInfo";
+import Impressum from "./pages/Impressum";
+import Datenschutz from "./pages/Datenschutz";
+import AGB from "./pages/AGB";
 import { getApiBaseUrl, createApiUrl } from "./utils/apiUrl.js";
 import DeliveryInfoPopup from "./components/DeliveryInfoPopup";
 import "./index.css";
@@ -49,6 +52,9 @@ function MainApp() {
       "reset-password": "ResetPassword",
       "store-info": "StoreInfo",
       info: "StoreInfo",
+      impressum: "Impressum",
+      datenschutz: "Datenschutz",
+      agb: "AGB",
     };
     return map[path] || "Home";
   });
@@ -81,6 +87,9 @@ function MainApp() {
           : "/reset-password";
       })(),
       StoreInfo: "/store-info",
+      Impressum: "/impressum",
+      Datenschutz: "/datenschutz",
+      AGB: "/agb",
     };
     const path = map[page] || "/home";
     window.history.pushState({}, "", path);
@@ -401,7 +410,10 @@ function MainApp() {
     page === "Orders" ||
     page === "Admin" ||
     page === "Driver" ||
-    page === "StoreInfo";
+    page === "StoreInfo" ||
+    page === "Impressum" ||
+    page === "Datenschutz" ||
+    page === "AGB";
 
   const hideFixedCart =
     page === "Checkout" ||
@@ -415,7 +427,10 @@ function MainApp() {
     page === "Orders" ||
     page === "Admin" ||
     page === "Driver" ||
-    page === "StoreInfo";
+    page === "StoreInfo" ||
+    page === "Impressum" ||
+    page === "Datenschutz" ||
+    page === "AGB";
 
   // 🧭 Universal navigation handler
   const handleNavigate = (newPage) => {
@@ -609,6 +624,11 @@ function MainApp() {
 
         {/* ℹ️ STORE INFO */}
         {page === "StoreInfo" && <StoreInfo onNavigate={handleNavigate} />}
+
+        {/* 📜 LEGAL PAGES */}
+        {page === "Impressum" && <Impressum onNavigate={handleNavigate} />}
+        {page === "Datenschutz" && <Datenschutz onNavigate={handleNavigate} />}
+        {page === "AGB" && <AGB onNavigate={handleNavigate} />}
       </main>
 
       {/* 🦶 FOOTER */}
@@ -674,9 +694,24 @@ function MainApp() {
               <div>
                 <div className="font-semibold text-base mb-2 text-amber-600">Rechtliches</div>
                 <div className="space-y-1">
-                  <div>Impressum</div>
-                  <div>Datenschutz</div>
-                  <div>AGB</div>
+                  <button
+                    onClick={() => handleNavigate("Impressum")}
+                    className="text-left hover:text-amber-600 transition-colors cursor-pointer"
+                  >
+                    Impressum
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("Datenschutz")}
+                    className="text-left hover:text-amber-600 transition-colors cursor-pointer block"
+                  >
+                    Datenschutz
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("AGB")}
+                    className="text-left hover:text-amber-600 transition-colors cursor-pointer block"
+                  >
+                    AGB
+                  </button>
                 </div>
               </div>
             </div>

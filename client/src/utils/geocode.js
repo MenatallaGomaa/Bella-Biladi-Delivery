@@ -4,33 +4,102 @@ export async function geocodeAddress(address) {
   if (!address) return null;
 
   try {
-    // Use Nominatim API for geocoding
-    const encodedAddress = encodeURIComponent(address + ", Leipzig, Germany");
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodedAddress}&format=json&limit=1&addressdetails=1`;
+    // Clean up the address
+    let cleanAddress = address.trim();
     
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'BellaBiladi-Delivery-App' // Required by Nominatim
+    // Remove duplicate "Leipzig" if present multiple times
+    const parts = cleanAddress.split(',').map(p => p.trim()).filter(Boolean);
+    const uniqueParts = [];
+    const seen = new Set();
+    
+    for (const part of parts) {
+      const lowerPart = part.toLowerCase();
+      // Skip duplicate Leipzig or Germany
+      if ((lowerPart === 'leipzig' || lowerPart === 'germany' || lowerPart === 'deutschland') && seen.has(lowerPart)) {
+        continue;
       }
-    });
-
-    if (!response.ok) {
-      throw new Error('Geocoding failed');
+      seen.add(lowerPart);
+      uniqueParts.push(part);
     }
-
-    const data = await response.json();
     
-    if (data && data.length > 0) {
-      return {
-        latitude: parseFloat(data[0].lat),
-        longitude: parseFloat(data[0].lon),
-        displayName: data[0].display_name,
-      };
+    cleanAddress = uniqueParts.join(', ');
+    
+    // Ensure we have Leipzig and Germany
+    const hasLeipzig = cleanAddress.toLowerCase().includes('leipzig');
+    const hasGermany = cleanAddress.toLowerCase().includes('germany') || cleanAddress.toLowerCase().includes('deutschland');
+    
+    if (!hasLeipzig) {
+      cleanAddress = `${cleanAddress}, Leipzig`;
+    }
+    if (!hasGermany) {
+      cleanAddress = `${cleanAddress}, Germany`;
+    }
+    
+    // Try multiple address formats
+    const addressVariations = [
+      cleanAddress,
+      cleanAddress.replace(/, Leipzig, Germany$/, ', Germany'), // Remove duplicate Leipzig
+      address.trim() + ', Leipzig, Germany', // Original with additions
+    ];
+    
+    for (const addressToTry of addressVariations) {
+      try {
+        const encodedAddress = encodeURIComponent(addressToTry);
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodedAddress}&format=json&limit=5&addressdetails=1`;
+        
+        console.log('🔍 Geocoding address:', addressToTry);
+        
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'BellaBiladi-Delivery-App' // Required by Nominatim
+          }
+        });
+
+        if (!response.ok) {
+          console.warn('⚠️ Geocoding API error:', response.status, response.statusText);
+          continue; // Try next variation
+        }
+
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          // Try to find the best match - prefer results with house numbers
+          let bestMatch = data[0];
+          
+          // If we have multiple results, try to find one that matches better
+          if (data.length > 1) {
+            const streetPart = address.split(',')[0].toLowerCase().trim();
+            const betterMatch = data.find(result => {
+              const displayName = (result.display_name || '').toLowerCase();
+              return displayName.includes(streetPart);
+            });
+            if (betterMatch) {
+              bestMatch = betterMatch;
+            }
+          }
+          
+          const result = {
+            latitude: parseFloat(bestMatch.lat),
+            longitude: parseFloat(bestMatch.lon),
+            displayName: bestMatch.display_name,
+          };
+          
+          console.log('✅ Geocoding success:', result);
+          return result;
+        }
+      } catch (err) {
+        console.warn('⚠️ Geocoding attempt failed:', err.message);
+        continue; // Try next variation
+      }
+      
+      // Add small delay to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
+    console.warn('⚠️ No geocoding results found for any variation of:', address);
     return null;
   } catch (error) {
-    console.error('Geocoding error:', error);
+    console.error('❌ Geocoding error:', error);
     return null;
   }
 }

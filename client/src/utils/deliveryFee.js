@@ -23,12 +23,12 @@ export function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Check if promotion is still active (until March 8, 2025)
+ * Check if promotion is still active (until March 8, 2026)
  * @returns {boolean}
  */
 export function isPromotionActive() {
   const today = new Date();
-  const promotionEndDate = new Date(2025, 2, 8); // March 8, 2025 (month is 0-indexed)
+  const promotionEndDate = new Date(2026, 2, 8); // March 8, 2026 (month is 0-indexed)
   return today <= promotionEndDate;
 }
 
@@ -40,7 +40,6 @@ export function isPromotionActive() {
  */
 export function calculateDeliveryFee(distanceKm, orderAmountCents) {
   const orderAmountEuros = orderAmountCents / 100;
-  const promotionActive = isPromotionActive();
 
   // Up to 2 km
   if (distanceKm <= 2) {
@@ -57,14 +56,10 @@ export function calculateDeliveryFee(distanceKm, orderAmountCents) {
   // Up to 4 km
   if (distanceKm <= 4) {
     if (orderAmountEuros >= 20) {
-      // Free during promotion
-      if (promotionActive) {
-        return { feeCents: 0, eligible: true };
-      }
       return { feeCents: 299, eligible: true }; // 2.99€
     }
     return {
-      feeCents: promotionActive ? 0 : 299,
+      feeCents: 299,
       eligible: false,
       reason: "Mindestbestellwert von 20€ nicht erreicht",
     };

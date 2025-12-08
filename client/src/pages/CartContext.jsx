@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "./AuthContext";
 
 const CartContext = createContext();
@@ -14,19 +14,56 @@ export function CartProvider({ children }) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [lastAdded, setLastAdded] = useState(null);
   const [isCartExpanded, setIsCartExpanded] = useState(false);
+  const previousStorageKeyRef = useRef(storageKey);
 
   useEffect(() => {
     setIsHydrated(false);
+    
+    const oldKey = previousStorageKeyRef.current;
+    
     try {
       const saved = localStorage.getItem(storageKey);
-      setCart(saved ? JSON.parse(saved) : []);
+      let cartData = saved ? JSON.parse(saved) : [];
+      
+      // If switching from guest to logged-in user, migrate guest cart
+      if (user?.id && storageKey === `cart:${user.id}` && oldKey === "cart:guest") {
+        const guestCartKey = "cart:guest";
+        const guestCart = localStorage.getItem(guestCartKey);
+        
+        if (guestCart) {
+          try {
+            const guestCartData = JSON.parse(guestCart);
+            // Merge guest cart with user cart (guest items first, then user cart items)
+            // If user cart is empty, use guest cart
+            if (guestCartData.length > 0) {
+              if (cartData.length === 0) {
+                // User has no cart, use guest cart
+                cartData = guestCartData;
+                console.log("🛒 Migrated guest cart to user cart:", guestCartData.length, "items");
+              } else {
+                // User has existing cart, merge them (guest items first)
+                cartData = [...guestCartData, ...cartData];
+                console.log("🛒 Merged guest cart with user cart:", guestCartData.length, "guest items +", cartData.length - guestCartData.length, "user items");
+              }
+              // Clear guest cart after migration
+              localStorage.removeItem(guestCartKey);
+            }
+          } catch (err) {
+            console.warn("⚠️ Error parsing guest cart during migration:", err);
+          }
+        }
+      }
+      
+      setCart(cartData);
+      previousStorageKeyRef.current = storageKey;
     } catch (err) {
       console.warn("⚠️ Fehler beim Lesen des Warenkorbs:", err);
       setCart([]);
+      previousStorageKeyRef.current = storageKey;
     } finally {
       setIsHydrated(true);
     }
-  }, [storageKey]);
+  }, [storageKey, user?.id]);
 
   // migrate legacy cart key once
   useEffect(() => {

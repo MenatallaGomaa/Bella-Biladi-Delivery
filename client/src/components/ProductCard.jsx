@@ -55,11 +55,17 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
   const { addToCart, lastAdded, isCartExpanded } = useCart();
   const [ref, isVisible] = useScrollAnimation({ threshold: 0.1 });
   const [imageError, setImageError] = useState(false);
-  const imageSrc = imageError || !item.imageUrl ? "/main.jpeg" : item.imageUrl;
+  // Encode image URL to handle spaces in filenames
+  const imageSrc = imageError || !item.imageUrl 
+    ? "/main.jpeg" 
+    : item.imageUrl.includes(" ") 
+      ? encodeURI(item.imageUrl)
+      : item.imageUrl;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const category = item.category?.toLowerCase() || "";
   const isPommesFritesItem = category === "french fries";
-  const [selectedDip, setSelectedDip] = useState(isPommesFritesItem ? POMMES_DIP_OPTIONS[0].id : DIP_OPTIONS[0].id);
+  const isBurgerItem = category === "burger";
+  const [selectedDip, setSelectedDip] = useState((isPommesFritesItem || isBurgerItem) ? POMMES_DIP_OPTIONS[0].id : DIP_OPTIONS[0].id);
   const [selectedCheese, setSelectedCheese] = useState(CHEESE_OPTIONS[0].id);
   const [selectedExtras, setSelectedExtras] = useState(new Set());
   const [quantity, setQuantity] = useState(1);
@@ -93,7 +99,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     setImageError(true);
   };
 
-  const { isPizza, isPizzaRoll, isDrink, isDessert, isFingerfood, isPommesFrites } = useMemo(() => {
+  const { isPizza, isPizzaRoll, isDrink, isDessert, isFingerfood, isPommesFrites, isBurger } = useMemo(() => {
     const category = item.category?.toLowerCase() || "";
     const name = item.name?.toLowerCase() || "";
 
@@ -105,6 +111,10 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       name.includes(keyword)
     );
 
+    const burgerKeywords = ["burger"].some((keyword) =>
+      name.includes(keyword)
+    );
+
     const isRoll =
       category === "pizza rolls" ||
       (category === "popular" && pizzaRollKeywords);
@@ -113,6 +123,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     const isDessertItem = category === "desserts";
     const isFingerfoodItem = category === "fingerfood";
     const isPommesFritesItem = category === "french fries";
+    const isBurgerItem = category === "burger" || burgerKeywords;
 
     return { 
       isPizza: isPizzaItem, 
@@ -120,7 +131,8 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       isDrink: isDrinkItem, 
       isDessert: isDessertItem,
       isFingerfood: isFingerfoodItem,
-      isPommesFrites: isPommesFritesItem
+      isPommesFrites: isPommesFritesItem,
+      isBurger: isBurgerItem
     };
   }, [item.category, item.name]);
 
@@ -128,7 +140,8 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     // Set default dip based on item type
     const category = item.category?.toLowerCase() || "";
     const isPommesFritesItem = category === "french fries";
-    setSelectedDip(isPommesFritesItem ? POMMES_DIP_OPTIONS[0].id : DIP_OPTIONS[0].id);
+    const isBurgerItem = category === "burger";
+    setSelectedDip(isPommesFritesItem || isBurgerItem ? POMMES_DIP_OPTIONS[0].id : DIP_OPTIONS[0].id);
     setSelectedCheese(CHEESE_OPTIONS[0].id);
     setSelectedExtras(new Set());
     setQuantity(1);
@@ -140,7 +153,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       return;
     }
     
-    if (isPizza || isPizzaRoll || isFingerfood || isPommesFrites) {
+    if (isPizza || isPizzaRoll || isFingerfood || isPommesFrites || isBurger) {
       setIsModalOpen(true);
     } else {
       addToCart({ ...item, baseItemId: baseId });
@@ -157,13 +170,13 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
   // Reset dip selection when modal opens based on item type
   useEffect(() => {
     if (isModalOpen) {
-      if (isPommesFrites) {
+      if (isPommesFrites || isBurger) {
         setSelectedDip(POMMES_DIP_OPTIONS[0].id);
       } else if (isPizzaRoll || isFingerfood) {
         setSelectedDip(DIP_OPTIONS[0].id);
       }
     }
-  }, [isModalOpen, isPommesFrites, isPizzaRoll, isFingerfood]);
+  }, [isModalOpen, isPommesFrites, isPizzaRoll, isFingerfood, isBurger]);
 
   const handleCardActivate = (event) => {
     if (
@@ -208,10 +221,10 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       details.push(`Dip: ${dipOption.label}`);
     }
 
-    if (isPommesFrites) {
+    if (isPommesFrites || isBurger) {
       const dipOption = POMMES_DIP_OPTIONS.find((d) => d.id === selectedDip) || POMMES_DIP_OPTIONS[0];
       customizations.dip = dipOption.label;
-      details.push(`Dip: ${dipOption.label}`);
+      details.push(`Dip für Pommes: ${dipOption.label}`);
     }
 
     if (isPizza) {
@@ -283,6 +296,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
               {isPizzaRoll ? "Pizzabrötchen anpassen" : 
                isFingerfood ? "Fingerfood anpassen" :
                isPommesFrites ? "Pommes Frites anpassen" :
+               isBurger ? "Burger anpassen" :
                "Pizza anpassen"}
             </h3>
             <button
@@ -325,6 +339,34 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
             {isPommesFrites && (
               <div>
                 <div className="text-sm font-medium text-gray-700">Dip auswählen</div>
+                <div className="mt-3 space-y-2">
+                  {POMMES_DIP_OPTIONS.map((dip) => (
+                    <label
+                      key={dip.id}
+                      className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors ${
+                        selectedDip === dip.id
+                          ? "border-amber-400 bg-amber-50"
+                          : "border-gray-200 hover:border-amber-200"
+                      }`}
+                    >
+                      <span>{dip.label}</span>
+                      <input
+                        type="radio"
+                        name="dip"
+                        checked={selectedDip === dip.id}
+                        onChange={() => setSelectedDip(dip.id)}
+                        className="h-4 w-4 text-amber-500 focus:ring-amber-500"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isBurger && (
+              <div>
+                <div className="text-sm font-medium text-gray-700">Dip für Pommes Frites auswählen</div>
+                <div className="text-xs text-gray-500 mb-2">Der Burger enthält kleine Pommes Frites</div>
                 <div className="mt-3 space-y-2">
                   {POMMES_DIP_OPTIONS.map((dip) => (
                     <label
@@ -456,19 +498,19 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
       <>
         <div
           ref={ref}
-          className={`relative min-w-[180px] bg-white shadow rounded-lg p-3 pb-2 snap-center transition-all duration-500 ease-out cursor-pointer ${
+          className={`relative min-w-[180px] bg-white shadow rounded-lg p-3 pb-2 snap-center transition-all duration-500 ease-out cursor-pointer flex flex-col ${
             isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4"
           } ${highlighted ? "ring-2 ring-amber-400 shadow-lg" : ""}`}
-          style={{ transitionDelay: `${delay}ms` }}
+          style={{ transitionDelay: `${delay}ms`, minHeight: '280px' }}
           role="button"
           tabIndex={0}
           onClick={handleCardActivate}
           onKeyDown={handleCardActivate}
         >
           {isDrink || isDessert ? (
-            <div className="w-full h-28 bg-gray-50 rounded-md flex items-center justify-center overflow-hidden p-1">
+            <div className="w-full h-28 bg-gray-50 rounded-md flex items-center justify-center overflow-hidden p-1 flex-shrink-0">
               <img
                 src={imageSrc}
                 alt={item.name}
@@ -480,12 +522,20 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
             <img
               src={imageSrc}
               alt={item.name}
-              className="w-full h-28 object-cover rounded-md"
+              className="w-full h-28 object-cover rounded-md flex-shrink-0"
               onError={handleImageError}
             />
           )}
-          <div className="mt-2 font-medium">{item.name}</div>
-          <div className="mt-1 font-semibold mb-1">{euro(item.priceCents)}</div>
+          <div className="mt-2 font-medium flex-shrink-0">{item.name}</div>
+          <div className="text-xs text-gray-500 mt-1 leading-relaxed flex-grow min-h-[3rem]">
+            {item.description}
+            {isBurger && (
+              <span className="block mt-1 text-xs text-amber-600 font-medium">
+                Der Burger enthält kleine Pommes Frites
+              </span>
+            )}
+          </div>
+          <div className="mt-auto font-semibold mb-1 flex-shrink-0">{euro(item.priceCents)}</div>
           <button
             onClick={handleButtonClick}
             className={`absolute top-2 right-2 bg-white rounded-full p-1 shadow transition-colors ${
@@ -519,6 +569,11 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
           <div className="font-medium text-base sm:text-lg">{item.name}</div>
           <div className="text-sm text-gray-500 mt-1 leading-relaxed max-h-16 overflow-hidden">
             {item.description}
+            {isBurger && (
+              <span className="block mt-1 text-xs text-amber-600 font-medium">
+                Der Burger enthält kleine Pommes Frites
+              </span>
+            )}
           </div>
           <div className="mt-2 font-semibold text-lg text-amber-600">
             {euro(item.priceCents)}

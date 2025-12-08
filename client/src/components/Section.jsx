@@ -22,7 +22,7 @@ const Section = forwardRef(({ title, items, onAddToCart }, ref) => {
 
       {title === "Beliebt" ? (
         <div 
-          className="flex gap-4 overflow-x-auto overflow-y-hidden scrollbar-hide snap-x snap-mandatory pb-2"
+          className="flex gap-4 overflow-x-auto overflow-y-hidden scrollbar-hide snap-x snap-mandatory pb-2 items-stretch"
           style={{ touchAction: 'pan-x pan-y' }}
           onTouchStart={(e) => {
             const touch = e.touches[0];

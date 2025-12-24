@@ -11,8 +11,9 @@ node update-admin-role.js <user-email>
 1. **Download MongoDB Compass**: https://www.mongodb.com/products/compass
 2. **Connect** using your Atlas connection string from `.env` file:
    ```
-   mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/database?retryWrites=true&w=majority
+   mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DATABASE?retryWrites=true&w=majority
    ```
+   ⚠️ **Important**: Replace `YOUR_USERNAME`, `YOUR_PASSWORD`, `YOUR_CLUSTER`, and `YOUR_DATABASE` with your actual credentials from your `.env` file.
 3. **Navigate** to your database → `users` collection
 4. **Find** the user document by email
 5. **Edit** the document:
@@ -35,8 +36,9 @@ node update-admin-role.js <user-email>
 
 1. **Connect** to your Atlas cluster:
    ```bash
-   mongosh "mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/database"
+   mongosh "mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/YOUR_DATABASE"
    ```
+   ⚠️ **Important**: Replace `YOUR_USERNAME`, `YOUR_PASSWORD`, `YOUR_CLUSTER`, and `YOUR_DATABASE` with your actual credentials from your `.env` file.
 
 2. **Update the user role**:
    ```javascript

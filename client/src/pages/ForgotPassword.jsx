@@ -7,11 +7,15 @@ export default function ForgotPassword({ onNavigate }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [resetUrl, setResetUrl] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess(false);
+    setPreviewUrl(null);
+    setResetUrl(null);
 
     const trimmed = email.trim();
     if (!trimmed) {
@@ -21,8 +25,15 @@ export default function ForgotPassword({ onNavigate }) {
 
     setLoading(true);
     try {
-      await requestPasswordReset(trimmed);
+      const result = await requestPasswordReset(trimmed);
       setSuccess(true);
+      // In development, show Ethereal preview URL
+      if (result?.previewUrl) {
+        setPreviewUrl(result.previewUrl);
+      }
+      if (result?.resetUrl) {
+        setResetUrl(result.resetUrl);
+      }
     } catch (err) {
       setError(err.message || "Etwas ist schief gelaufen");
     } finally {
@@ -45,8 +56,44 @@ export default function ForgotPassword({ onNavigate }) {
         )}
 
         {success ? (
-          <div className="rounded border border-green-300 bg-green-100 px-3 py-3 text-sm text-green-700">
-            Wir haben dir (falls vorhanden) eine E-Mail mit weiteren Schritten geschickt.
+          <div className="space-y-4">
+            <div className="rounded border border-green-300 bg-green-100 px-3 py-3 text-sm text-green-700">
+              {previewUrl ? (
+                <>
+                  <p className="mb-2 font-semibold">✅ E-Mail wurde gesendet!</p>
+                  <p className="mb-3">In der Entwicklungsumgebung können Sie die E-Mail hier ansehen:</p>
+                  <a 
+                    href={previewUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-semibold mb-3"
+                  >
+                    📧 E-Mail-Vorschau öffnen
+                  </a>
+                  {resetUrl && (
+                    <div className="mt-3 p-2 bg-gray-50 rounded border">
+                      <p className="text-xs text-gray-600 mb-1">Oder kopieren Sie diesen Link:</p>
+                      <code className="text-xs break-all text-blue-600">{resetUrl}</code>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p>Wir haben dir (falls vorhanden) eine E-Mail mit weiteren Schritten geschickt. Bitte überprüfe dein Postfach und klicke auf den Link in der E-Mail.</p>
+              )}
+            </div>
+            {resetUrl && !previewUrl && (
+              <div className="rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                <p className="font-semibold mb-2">Direkter Reset-Link:</p>
+                <button
+                  onClick={() => {
+                    window.location.href = resetUrl;
+                  }}
+                  className="text-blue-600 underline hover:text-blue-800 break-all text-left"
+                >
+                  {resetUrl}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

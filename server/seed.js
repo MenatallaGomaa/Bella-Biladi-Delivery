@@ -62,7 +62,7 @@ const items = [
     imageUrl: "/funghi.jpeg",
   },
   {
-    name: "Pizza Coppola",
+    name: "Pizza Cippola",
     description: "Tomatensauce, Käse und Zwiebeln.",
     priceCents: 700,
     category: "Pizza",

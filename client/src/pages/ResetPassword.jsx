@@ -3,18 +3,23 @@ import { useAuth } from "./AuthContext";
 
 export default function ResetPassword({ onNavigate }) {
   const { resetPassword } = useAuth();
-  const [token] = useState(() => new URLSearchParams(window.location.search).get("token") || "");
+  const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Read token from URL on mount
   useEffect(() => {
-    if (!token) {
-      setError("Der Link ist ungültig oder abgelaufen.");
+    const urlToken = new URLSearchParams(window.location.search).get("token") || "";
+    setToken(urlToken);
+    if (!urlToken) {
+      setError("Der Link ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an.");
+    } else {
+      setError(""); // Clear error if token is found
     }
-  }, [token]);
+  }, []); // Only check on mount
 
   const handleSubmit = async (e) => {
     e.preventDefault();

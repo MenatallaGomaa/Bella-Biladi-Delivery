@@ -65,6 +65,18 @@ function MainApp() {
   const activeRef = useRef(active); // Keep ref of active to avoid dependency issues
   const [showDeliveryPopup, setShowDeliveryPopup] = useState(false);
 
+  // 🧭 Check URL on mount for reset-password token and navigate accordingly
+  useEffect(() => {
+    const path = window.location.pathname.replace(/^\//, "");
+    const search = window.location.search;
+    if (path === "reset-password" && search.includes("token=")) {
+      // If URL has reset-password with token, ensure we're on ResetPassword page
+      if (page !== "ResetPassword") {
+        setPage("ResetPassword");
+      }
+    }
+  }, []); // Only check on mount
+
   // 🧭 Sync URL + localStorage
   useEffect(() => {
     localStorage.setItem("currentPage", page);

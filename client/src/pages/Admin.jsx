@@ -5,7 +5,7 @@ import DriverMap from "../components/DriverMap";
 import { io } from "socket.io-client";
 
 // Normalize API base URL - remove trailing slash to avoid double slashes
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
 
 export default function Admin({ onNavigate }) {
   const { user, refreshProfile } = useAuth();

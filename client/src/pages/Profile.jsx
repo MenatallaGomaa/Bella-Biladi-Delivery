@@ -23,7 +23,7 @@ export default function Profile({ onNavigate }) {
     }
     async function load() {
       try {
-        const apiBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
+        const apiBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
         const res = await fetch(`${apiBase}/api/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -111,7 +111,7 @@ export default function Profile({ onNavigate }) {
     setSuccess("");
     const token = localStorage.getItem("token");
     try {
-      const apiBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
+      const apiBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
       const res = await fetch(`${apiBase}/api/profile/addresses`, {
         method: "PUT",
         headers: {
@@ -192,7 +192,7 @@ export default function Profile({ onNavigate }) {
                 setError("");
                 const token = localStorage.getItem("token");
                 if (token) {
-                  const apiBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
+                  const apiBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
                   fetch(`${apiBase}/api/profile`, {
                     headers: { Authorization: `Bearer ${token}` },
                   })

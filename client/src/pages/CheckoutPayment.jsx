@@ -12,7 +12,7 @@ import clockIcon from "/public/clock.png";
 import chatIcon from "/public/chat.png";
 
 // Normalize API base URL - remove trailing slash to avoid double slashes
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
 
 // Store hours configuration
 // Monday-Saturday: 11:00-22:00, Sunday: 11:00-23:00
@@ -26,11 +26,70 @@ const STORE_HOURS = {
   6: { open: 11, close: 22 }, // Saturday
 };
 
-// Helper function to get available time slots based on day and store hours
-function getAvailableTimeSlots(day) {
+// Helper function to format date for display
+function formatDateLabel(date, isToday = false, isTomorrow = false) {
+  const dayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+  const dayName = dayNames[date.getDay()];
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  
+  if (isToday) {
+    return `Heute, ${day}.${month.toString().padStart(2, "0")}.`;
+  } else if (isTomorrow) {
+    return `Morgen, ${day}.${month.toString().padStart(2, "0")}.`;
+  } else {
+    return `${dayName}, ${day}.${month.toString().padStart(2, "0")}.`;
+  }
+}
+
+// Helper function to generate the next 10 days
+function getNextDays(count = 10) {
+  const days = [];
   const now = new Date();
-  const targetDate = day === "Heute" ? now : new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  const dayOfWeek = targetDate.getDay();
+  now.setHours(0, 0, 0, 0); // Reset to start of day
+  
+  for (let i = 0; i < count; i++) {
+    const date = new Date(now);
+    date.setDate(now.getDate() + i);
+    const isToday = i === 0;
+    const isTomorrow = i === 1;
+    
+    days.push({
+      date,
+      label: formatDateLabel(date, isToday, isTomorrow),
+      value: date.toISOString().split('T')[0], // YYYY-MM-DD format
+      isToday,
+      isTomorrow,
+    });
+  }
+  
+  return days;
+}
+
+// Helper function to get available time slots based on date and store hours
+function getAvailableTimeSlots(targetDate) {
+  // Handle both Date objects and legacy string values
+  let date;
+  if (targetDate instanceof Date) {
+    date = targetDate;
+  } else if (typeof targetDate === 'string') {
+    // Legacy support: "Heute" or "Morgen" or date string
+    const now = new Date();
+    if (targetDate === "Heute") {
+      date = now;
+    } else if (targetDate === "Morgen") {
+      date = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    } else {
+      // Try parsing as date string (YYYY-MM-DD)
+      date = new Date(targetDate);
+    }
+  } else {
+    date = new Date(targetDate);
+  }
+  
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const dayOfWeek = date.getDay();
   const storeHours = STORE_HOURS[dayOfWeek];
   
   if (!storeHours) {
@@ -52,7 +111,7 @@ function getAvailableTimeSlots(day) {
     }
   }
   
-  if (day === "Heute") {
+  if (isToday) {
     // For today, filter slots to only show those at least 45 minutes in the future
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -64,7 +123,7 @@ function getAvailableTimeSlots(day) {
     
     return available;
   } else {
-    // For tomorrow, show all slots within store hours
+    // For future days, show all slots within store hours
     return slots.map(({ formatted }) => formatted);
   }
 }
@@ -126,7 +185,7 @@ export default function CheckoutPayment({ onNavigate }) {
     phone: "",
     street: "",
     postalCity: "",
-    time: { type: "asap", label: "So schnell wie möglich" },
+    time: { type: "asap", label: "So schnell wie möglich", date: null, hour: null },
     comment: "",
   });
 
@@ -134,6 +193,7 @@ export default function CheckoutPayment({ onNavigate }) {
   const [cartValidationError, setCartValidationError] = useState("");
 
   // Validate cart items against current database
+  // Match by name instead of ID since IDs change when database is re-seeded
   useEffect(() => {
     async function validateCartItems() {
       if (cart.length === 0) {
@@ -150,18 +210,16 @@ export default function CheckoutPayment({ onNavigate }) {
         }
         
         const allItems = await res.json();
-        const validItemIds = new Set(allItems.map(item => String(item._id)));
+        // Create a set of valid item names (more stable than IDs)
+        const validItemNames = new Set(allItems.map(item => item.name));
         
         const invalidItems = cart.filter(item => {
-          // Check baseItemId first (for customized items), then _id, then id
-          const itemId = item.baseItemId || item._id || item.id;
-          if (!itemId) {
-            // If no ID at all, consider it invalid only if it also has no name
-            return !item.name;
+          // If item has no name, consider it invalid
+          if (!item.name) {
+            return true;
           }
-          // Try both string and original format comparison
-          const itemIdStr = String(itemId);
-          return !validItemIds.has(itemIdStr);
+          // Check if item name exists in database
+          return !validItemNames.has(item.name);
         });
 
         if (invalidItems.length > 0) {
@@ -478,37 +536,65 @@ export default function CheckoutPayment({ onNavigate }) {
       return;
     }
 
-    // First, validate that all items still exist in the database
+    // First, validate that all items still exist in the database and get current IDs
+    let allItems, nameToIdMap;
     try {
       const itemsRes = await fetch(`${API_BASE}/api/items`);
       if (!itemsRes.ok) throw new Error("Could not fetch items");
-      const allItems = await itemsRes.json();
-      const validItemIds = new Set(allItems.map(item => String(item._id)));
+      allItems = await itemsRes.json();
       
+      // Create a map of item names to their current IDs
+      nameToIdMap = new Map();
+      allItems.forEach(item => {
+        if (item.name) {
+          nameToIdMap.set(item.name, String(item._id));
+        }
+      });
+      
+      // Validate items by name and update cart items with current IDs
       const invalidItems = grouped.filter(item => {
-        const itemId = item._id || item.id || item.baseItemId;
-        if (!itemId) return true;
-        // Try both string and original format comparison
-        const itemIdStr = String(itemId);
-        return !validItemIds.has(itemIdStr);
+        if (!item.name) return true;
+        return !nameToIdMap.has(item.name);
       });
 
       if (invalidItems.length > 0) {
         setSubmitError(
           `Einige Artikel im Warenkorb sind nicht mehr verfügbar. Die nicht verfügbaren Artikel wurden entfernt.`
         );
-        // Clear invalid items from cart
+        // Clear invalid items from cart (match by name)
+        const validItemNames = new Set(allItems.map(item => item.name));
         const validCartItems = cart.filter(item => {
-          const itemId = item._id || item.id;
-          return itemId && validItemIds.has(String(itemId));
+          return item.name && validItemNames.has(item.name);
         });
         if (validCartItems.length === 0) {
           clearCart();
         } else {
-          // Update cart to only include valid items
-          setCart(validCartItems);
+          // Update cart items with current IDs from database
+          const updatedCartItems = validCartItems.map(cartItem => {
+            const currentId = nameToIdMap.get(cartItem.name);
+            if (currentId) {
+              return { ...cartItem, _id: currentId, id: currentId };
+            }
+            return cartItem;
+          });
+          setCart(updatedCartItems);
         }
         return;
+      }
+      
+      // Update cart items with current IDs if they don't match
+      const updatedCart = cart.map(cartItem => {
+        if (cartItem.name && nameToIdMap.has(cartItem.name)) {
+          const currentId = nameToIdMap.get(cartItem.name);
+          const cartItemId = String(cartItem._id || cartItem.id || '');
+          if (cartItemId !== currentId) {
+            return { ...cartItem, _id: currentId, id: currentId };
+          }
+        }
+        return cartItem;
+      });
+      if (JSON.stringify(updatedCart) !== JSON.stringify(cart)) {
+        setCart(updatedCart);
       }
     } catch (err) {
       console.error("Error validating cart items:", err);
@@ -516,15 +602,25 @@ export default function CheckoutPayment({ onNavigate }) {
       return;
     }
 
+    // Build items payload - use current IDs from database (reuse nameToIdMap from validation)
     const itemsPayload = [];
     for (const item of grouped) {
-      const itemId = item._id || item.id;
-      if (!itemId) {
+      if (!item.name) {
         setSubmitError(
           "Ein Artikel konnte nicht verarbeitet werden. Bitte lade die Seite neu."
         );
         return;
       }
+      
+      // Get current ID from database by name
+      const itemId = nameToIdMap.get(item.name);
+      if (!itemId) {
+        setSubmitError(
+          `Artikel "${item.name}" konnte nicht gefunden werden. Bitte entferne ihn aus dem Warenkorb.`
+        );
+        return;
+      }
+      
       // Ensure qty is a valid number
       const qty = Number(item.qty) || 1;
       if (qty < 1) {
@@ -574,20 +670,33 @@ export default function CheckoutPayment({ onNavigate }) {
         }
         // If server says items not found, clean up the cart
         if (data.error && data.error.includes("Some items not found")) {
-          // Fetch current items and filter out invalid ones
+          // Fetch current items and filter out invalid ones by name
           try {
             const itemsRes = await fetch(`${API_BASE}/api/items`);
             if (itemsRes.ok) {
               const allItems = await itemsRes.json();
-              const validItemIds = new Set(allItems.map(item => String(item._id)));
+              const validItemNames = new Set(allItems.map(item => item.name));
               const validCartItems = cart.filter(item => {
-                const itemId = item._id || item.id;
-                return itemId && validItemIds.has(String(itemId));
+                return item.name && validItemNames.has(item.name);
               });
               if (validCartItems.length === 0) {
                 clearCart();
               } else {
-                setCart(validCartItems);
+                // Update cart items with current IDs
+                const nameToIdMap = new Map();
+                allItems.forEach(item => {
+                  if (item.name) {
+                    nameToIdMap.set(item.name, String(item._id));
+                  }
+                });
+                const updatedCartItems = validCartItems.map(cartItem => {
+                  const currentId = nameToIdMap.get(cartItem.name);
+                  if (currentId) {
+                    return { ...cartItem, _id: currentId, id: currentId };
+                  }
+                  return cartItem;
+                });
+                setCart(updatedCartItems);
               }
             }
           } catch (cleanupErr) {
@@ -1231,34 +1340,40 @@ export default function CheckoutPayment({ onNavigate }) {
                       setSubmitError("");
                       setValidationAttempted(false);
                       setErrors((prev) => ({ ...prev, time: undefined }));
-                      // Get first available slot for today
-                      const availableSlots = getAvailableTimeSlots("Heute");
                       
-                      // If no slots available for today, use tomorrow
+                      // Get next 10 days
+                      const nextDays = getNextDays(10);
+                      const today = nextDays[0];
+                      const todayDate = today.date;
+                      
+                      // Get first available slot for today
+                      const availableSlots = getAvailableTimeSlots(todayDate);
+                      
+                      // Find first day with available slots
+                      let selectedDay = today;
+                      let selectedSlots = availableSlots;
+                      
                       if (availableSlots.length === 0) {
-                        const tomorrowSlots = getAvailableTimeSlots("Morgen");
-                        const firstSlot = tomorrowSlots[0] || "12:00";
-                        setForm({
-                          ...form,
-                          time: {
-                            type: "later",
-                            day: "Morgen",
-                            hour: firstSlot,
-                            label: `Morgen, ${firstSlot} Uhr`,
-                          },
-                        });
-                      } else {
-                        const firstSlot = availableSlots[0] || "12:00";
-                        setForm({
-                          ...form,
-                          time: {
-                            type: "later",
-                            day: "Heute",
-                            hour: firstSlot,
-                            label: `Heute, ${firstSlot} Uhr`,
-                          },
-                        });
+                        // Try tomorrow
+                        const tomorrow = nextDays[1];
+                        if (tomorrow) {
+                          selectedDay = tomorrow;
+                          selectedSlots = getAvailableTimeSlots(tomorrow.date);
+                        }
                       }
+                      
+                      const firstSlot = selectedSlots[0] || "12:00";
+                      const dayLabel = formatDateLabel(selectedDay.date, selectedDay.isToday, selectedDay.isTomorrow);
+                      
+                      setForm({
+                        ...form,
+                        time: {
+                          type: "later",
+                          date: selectedDay.value,
+                          hour: firstSlot,
+                          label: `${dayLabel} ${firstSlot} Uhr`,
+                        },
+                      });
                     }}
                   />
                   <span>Für später planen</span>
@@ -1266,81 +1381,153 @@ export default function CheckoutPayment({ onNavigate }) {
                 {form.time.type === "later" && (
                   <div className="mt-3 space-y-4">
                     <select
+                      key={`date-select-${form.time.date || 'none'}`}
                       className="w-full border border-amber-300 rounded-lg px-3 py-2 focus:ring-amber-400 focus:border-amber-400 outline-none"
-                      value={form.time.day}
+                      value={form.time.date || ""}
                       onChange={(e) => {
-                        const selectedDay = e.target.value;
-                        // Calculate available time slots for the selected day
-                        const availableSlots = getAvailableTimeSlots(selectedDay);
+                        const selectedDateValue = e.target.value;
+                        const selectedDate = new Date(selectedDateValue);
+                        const nextDays = getNextDays(10);
+                        const selectedDay = nextDays.find(d => d.value === selectedDateValue);
                         
-                        // If no slots available for today, switch to tomorrow
-                        if (selectedDay === "Heute" && availableSlots.length === 0) {
-                          const tomorrowSlots = getAvailableTimeSlots("Morgen");
-                          const firstSlot = tomorrowSlots[0] || "12:00";
-                          setForm((prev) => ({
-                            ...prev,
-                            time: {
-                              ...prev.time,
-                              day: "Morgen",
-                              hour: firstSlot,
-                            },
-                          }));
+                        if (!selectedDay) return;
+                        
+                        // Calculate available time slots for the selected date
+                        const availableSlots = getAvailableTimeSlots(selectedDate);
+                        
+                        // If no slots available, try to find next available day
+                        if (availableSlots.length === 0) {
+                          const currentIndex = nextDays.findIndex(d => d.value === selectedDateValue);
+                          for (let i = currentIndex + 1; i < nextDays.length; i++) {
+                            const daySlots = getAvailableTimeSlots(nextDays[i].date);
+                            if (daySlots.length > 0) {
+                              const firstSlot = daySlots[0];
+                              const dayLabel = formatDateLabel(nextDays[i].date, nextDays[i].isToday, nextDays[i].isTomorrow);
+                              setForm((prev) => ({
+                                ...prev,
+                                time: {
+                                  ...prev.time,
+                                  date: nextDays[i].value,
+                                  hour: firstSlot,
+                                  label: `${dayLabel} ${firstSlot} Uhr`,
+                                },
+                              }));
+                              return;
+                            }
+                          }
                         } else {
                           const firstAvailableSlot = availableSlots[0] || "12:00";
+                          const dayLabel = formatDateLabel(selectedDate, selectedDay.isToday, selectedDay.isTomorrow);
                           setForm((prev) => ({
                             ...prev,
                             time: {
                               ...prev.time,
-                              day: selectedDay,
+                              date: selectedDateValue,
                               hour: firstAvailableSlot,
+                              label: `${dayLabel} ${firstAvailableSlot} Uhr`,
                             },
                           }));
                         }
                       }}
                     >
-                      <option value="Heute">Heute</option>
-                      <option value="Morgen">Morgen</option>
+                      {(() => {
+                        const days = getNextDays(10);
+                        console.log("📅 Generating dropdown with", days.length, "days:", days.map(d => d.label));
+                        return days.map((day) => {
+                          const dayDate = day.date;
+                          const availableSlots = getAvailableTimeSlots(dayDate);
+                          const isDisabled = availableSlots.length === 0;
+                          
+                          console.log(`Day: ${day.label}, Slots: ${availableSlots.length}, Disabled: ${isDisabled}`);
+                          
+                          return (
+                            <option 
+                              key={day.value} 
+                              value={day.value}
+                              disabled={isDisabled}
+                              style={{ display: 'block' }}
+                            >
+                              {day.label} {isDisabled ? "(geschlossen)" : ""}
+                            </option>
+                          );
+                        });
+                      })()}
                     </select>
                     <select
                       className="w-full border border-amber-300 rounded-lg px-3 py-2 focus:ring-amber-400 focus:border-amber-400 outline-none"
-                      value={form.time.hour}
-                      onChange={(e) =>
+                      value={form.time.hour || ""}
+                      onChange={(e) => {
+                        const selectedHour = e.target.value;
+                        if (!form.time.date) return;
+                        
+                        const selectedDate = new Date(form.time.date);
+                        const nextDays = getNextDays(10);
+                        const selectedDay = nextDays.find(d => d.value === form.time.date);
+                        
+                        if (!selectedDay) return;
+                        
+                        const dayLabel = formatDateLabel(selectedDate, selectedDay.isToday, selectedDay.isTomorrow);
+                        
                         setForm((prev) => ({
                           ...prev,
-                          time: { ...prev.time, hour: e.target.value },
-                        }))
-                      }
+                          time: {
+                            ...prev.time,
+                            hour: selectedHour,
+                            label: `${dayLabel} ${selectedHour} Uhr`,
+                          },
+                        }));
+                      }}
                     >
                       {(() => {
-                        const availableSlots = getAvailableTimeSlots(form.time.day);
-                        if (availableSlots.length === 0 && form.time.day === "Heute") {
+                        if (!form.time.date) {
+                          return <option value="">Bitte wähle zuerst ein Datum</option>;
+                        }
+                        
+                        const selectedDate = new Date(form.time.date);
+                        const availableSlots = getAvailableTimeSlots(selectedDate);
+                        
+                        if (availableSlots.length === 0) {
                           return (
                             <option value="" disabled>
-                              Keine Slots verfügbar - bitte wähle Morgen
+                              Keine Slots verfügbar für diesen Tag
                             </option>
                           );
                         }
+                        
                         return availableSlots.map((formatted) => (
                           <option key={formatted} value={formatted}>
-                            {formatted}
+                            {formatted} Uhr
                           </option>
                         ));
                       })()}
                     </select>
-                    {form.time.day === "Heute" && getAvailableTimeSlots("Heute").length === 0 && (
-                      <p className="text-sm text-amber-600 mt-2">
-                        ⚠️ Keine Slots mehr verfügbar für heute. Bitte wähle "Morgen".
-                      </p>
-                    )}
+                    {form.time.date && (() => {
+                      const selectedDate = new Date(form.time.date);
+                      const availableSlots = getAvailableTimeSlots(selectedDate);
+                      if (availableSlots.length === 0) {
+                        return (
+                          <p className="text-sm text-amber-600 mt-2">
+                            ⚠️ Keine Slots verfügbar für diesen Tag. Bitte wähle einen anderen Tag.
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 )}
 
                 <button
                   onClick={() => {
-                    const label =
-                      form.time.type === "asap"
-                        ? "So schnell wie möglich"
-                        : `${form.time.day}, ${form.time.hour} Uhr`;
+                    let label = "So schnell wie möglich";
+                    if (form.time.type === "later" && form.time.date && form.time.hour) {
+                      const selectedDate = new Date(form.time.date);
+                      const nextDays = getNextDays(10);
+                      const selectedDay = nextDays.find(d => d.value === form.time.date);
+                      if (selectedDay) {
+                        const dayLabel = formatDateLabel(selectedDate, selectedDay.isToday, selectedDay.isTomorrow);
+                        label = `${dayLabel} ${form.time.hour} Uhr`;
+                      }
+                    }
                     setForm((prev) => ({
                       ...prev,
                       time: { ...prev.time, label },
@@ -1389,3 +1576,4 @@ export default function CheckoutPayment({ onNavigate }) {
     </div>
   );
 }
+

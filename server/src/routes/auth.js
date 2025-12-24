@@ -15,12 +15,36 @@ const JWT_EXPIRES_IN = "7d";
 
 let transporter;
 async function getTransporter() {
-  if (transporter) return transporter;
+  if (transporter) {
+    // Verify transporter is still working
+    try {
+      await transporter.verify();
+      return transporter;
+    } catch (err) {
+      console.warn("⚠️ Transporter verification failed, recreating...", err.message);
+      transporter = null; // Reset to recreate
+    }
+  }
+  
   if (process.env.NODE_ENV === "production") {
+    // Check if email credentials are set
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      throw new Error("EMAIL_USER and EMAIL_PASS environment variables are required for production email sending");
+    }
+    
     transporter = nodemailer.createTransport({
       service: "gmail",
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
     });
+    
+    // Verify Gmail connection
+    try {
+      await transporter.verify();
+      console.log("✅ Gmail transporter verified and ready");
+    } catch (err) {
+      console.error("❌ Gmail transporter verification failed:", err.message);
+      throw new Error(`Gmail authentication failed: ${err.message}. Please check EMAIL_USER and EMAIL_PASS.`);
+    }
   } else {
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
@@ -237,29 +261,110 @@ router.post("/verify-email", async (req, res) => {
 router.post("/forgot-password", async (req, res) => {
   const emailInput = (req.body.email || "").trim().toLowerCase();
   if (!emailInput) {
-    return res.json({ success: true });
+    return res.status(400).json({ error: "E-Mail-Adresse ist erforderlich" });
   }
   const user = await User.findOne({ email: emailInput });
-  if (!user) return res.json({ success: true });
+  if (!user) {
+    // Don't reveal if user exists (security best practice)
+    return res.json({ success: true, message: "Wenn diese E-Mail registriert ist, wurde ein Link gesendet." });
+  }
   user.resetPasswordToken = crypto.randomBytes(20).toString("hex");
-  user.resetPasswordExpires = new Date(Date.now() + 1000 * 60 * 60);
+  user.resetPasswordExpires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
   await user.save();
+  
+  const baseUrl = process.env.APP_BASE_URL || "http://localhost:5173";
+  const resetUrl = `${baseUrl}/reset-password?token=${user.resetPasswordToken}`;
+  
+  let emailPreviewUrl = null;
+  let emailError = null;
+  
   try {
     const t = await getTransporter();
-    const url = `${process.env.APP_BASE_URL || "http://localhost:5173"}/reset-password?token=${user.resetPasswordToken}`;
     const info = await t.sendMail({
       from: `BellaBiladi <${process.env.EMAIL_USER || "no-reply@bellabiladi.de"}>`,
       to: user.email,
-      subject: "Passwort zurücksetzen",
-      html: `<p>Passwort zurücksetzen: <a href="${url}">Link</a></p>`
+      subject: "Passwort zurücksetzen - Bella Biladi",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            .button:hover { background-color: #d97706; }
+            .footer { margin-top: 30px; font-size: 12px; color: #666; }
+            .link { word-break: break-all; color: #2563eb; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2>Passwort zurücksetzen</h2>
+            <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
+            <p>Klicken Sie auf den folgenden Button, um Ihr Passwort zurückzusetzen:</p>
+            <a href="${resetUrl}" class="button">Passwort zurücksetzen</a>
+            <p>Oder kopieren Sie diesen Link in Ihren Browser:</p>
+            <p class="link">${resetUrl}</p>
+            <p><strong>Dieser Link ist 1 Stunde gültig.</strong></p>
+            <p>Wenn Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail bitte.</p>
+            <div class="footer">
+              <p>Mit freundlichen Grüßen,<br>Bella Biladi Team</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Passwort zurücksetzen\n\nKlicken Sie auf diesen Link, um Ihr Passwort zurückzusetzen:\n${resetUrl}\n\nDieser Link ist 1 Stunde gültig.\n\nWenn Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail bitte.`
     });
+    
+    // In development, get the Ethereal preview URL
     if (process.env.NODE_ENV !== "production") {
-      console.log("Reset preview:", nodemailer.getTestMessageUrl(info));
+      emailPreviewUrl = nodemailer.getTestMessageUrl(info);
+      console.log("📧 Password reset email sent to Ethereal:");
+      console.log("   Preview URL:", emailPreviewUrl);
+      console.log("   Reset URL:", resetUrl);
+    } else {
+      console.log("📧 Password reset email sent to:", user.email);
     }
   } catch (e) {
-    console.warn("Email send failed:", e.message);
+    emailError = e.message;
+    console.error("❌ Email send failed:", e.message);
+    console.error("   Full error:", e);
+    
+    // Log detailed error information for debugging
+    if (process.env.NODE_ENV === "production") {
+      console.error("   EMAIL_USER set:", !!process.env.EMAIL_USER);
+      console.error("   EMAIL_PASS set:", !!process.env.EMAIL_PASS);
+    }
+    
+    // In production, still return success to user (security best practice - don't reveal if email exists)
+    // But log the error for admin debugging
   }
-  res.json({ success: true });
+  
+  // In development, return the preview URL so frontend can show it
+  if (process.env.NODE_ENV !== "production" && emailPreviewUrl) {
+    return res.json({ 
+      success: true, 
+      message: "E-Mail wurde gesendet.",
+      previewUrl: emailPreviewUrl, // For development - show Ethereal preview
+      resetUrl: resetUrl // Also return the reset URL for easy access
+    });
+  }
+  
+  // In production, always return success (security best practice)
+  // But include emailError in response for admin debugging if needed
+  const response = { 
+    success: true, 
+    message: "Wenn diese E-Mail registriert ist, wurde ein Link gesendet."
+  };
+  
+  // Only include emailError in development or if explicitly enabled
+  if (process.env.NODE_ENV !== "production" && emailError) {
+    response.emailError = `E-Mail konnte nicht gesendet werden: ${emailError}`;
+  }
+  
+  res.json(response);
 });
 
 // Reset password

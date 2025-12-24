@@ -5,7 +5,7 @@
  * @returns {string} - Normalized base URL without trailing slash
  */
 export function normalizeApiBaseUrl(baseUrl) {
-  if (!baseUrl) return "http://localhost:10000";
+  if (!baseUrl) return "http://localhost:4000";
   return baseUrl.replace(/\/+$/, "");
 }
 
@@ -28,7 +28,7 @@ export function createApiUrl(baseUrl, endpoint) {
  * @returns {string} - Normalized API base URL
  */
 export function getApiBaseUrl() {
-  const raw = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000";
+  const raw = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000";
   return normalizeApiBaseUrl(raw);
 }
 

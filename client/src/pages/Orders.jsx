@@ -5,7 +5,7 @@ import { useAuth } from "./AuthContext";
 import { translateStatus } from "../utils/statusTranslations";
 import DriverMap from "../components/DriverMap";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000").replace(/\/+$/, "");
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
 
 export default function Orders({ onNavigate }) {
   const { user } = useAuth();

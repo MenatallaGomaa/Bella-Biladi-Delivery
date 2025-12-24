@@ -81,7 +81,7 @@ export function AuthProvider({ children }) {
   // Debug logging (remove in production if needed)
   if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
     console.log("🔍 API Base URL Debug:", {
-      raw: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:10000",
+      raw: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000",
       normalized: apiBase,
       loginUrl: createApiUrl(apiBase, "/api/login")
     });
@@ -159,11 +159,12 @@ export function AuthProvider({ children }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
+    const data = await parseJsonResponse(res).catch(() => ({}));
     if (!res.ok) {
-      const data = await parseJsonResponse(res).catch(() => ({}));
       throw new Error(data.error || "Zurücksetzen konnte nicht gestartet werden");
     }
-    return true;
+    // Return the full response data (includes previewUrl and resetUrl in development)
+    return data;
   };
 
   const resetPassword = async (token, password) => {

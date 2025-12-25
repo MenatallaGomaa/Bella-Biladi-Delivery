@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { translateStatus } from "../utils/statusTranslations";
-import DriverMap from "../components/DriverMap";
 import { io } from "socket.io-client";
 
 // Normalize API base URL - remove trailing slash to avoid double slashes
@@ -1211,32 +1210,7 @@ export default function Admin({ onNavigate }) {
                               Keine aktive Bestellung
                             </p>
                           )}
-                          {driver.currentLocation?.latitude && (
-                            <p className="text-xs text-gray-500">
-                              <strong>📍 Letzte Aktualisierung:</strong>{" "}
-                              {new Date(driver.currentLocation.lastUpdated).toLocaleString("de-DE")}
-                            </p>
-                          )}
                         </div>
-                      </div>
-                      
-                      {/* Always show map - driver starts at restaurant, moves when location available */}
-                      <div className="lg:w-96 h-64 bg-gray-100 rounded-lg overflow-hidden">
-                        <DriverMap
-                          driverLocation={
-                            driver.currentLocation?.latitude && driver.currentLocation?.longitude
-                              ? {
-                                  latitude: driver.currentLocation.latitude,
-                                  longitude: driver.currentLocation.longitude,
-                                  driverName: driver.name,
-                                }
-                              : null
-                          }
-                          customerAddress={driver.currentOrder?.customer?.address}
-                          orderId={driver.currentOrder?._id || driver._id}
-                          orderStatus={driver.currentOrder?.status}
-                          height="256px"
-                        />
                       </div>
                     </div>
                   </div>

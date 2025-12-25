@@ -24,6 +24,13 @@ let transporter;
 async function initTransporter() {
   if (process.env.NODE_ENV === "production") {
     // --- Gmail setup (for production) ---
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error("❌ EMAIL_USER and EMAIL_PASS environment variables are required for production!");
+      console.error("❌ Email sending will not work until these are configured.");
+      transporter = null;
+      return;
+    }
+    
     transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -34,30 +41,55 @@ async function initTransporter() {
 
     try {
       await transporter.verify();
-      console.log("✅ Gmail transporter ready");
+      console.log("✅ Gmail transporter ready and verified");
+      console.log(`📧 Email will be sent from: ${process.env.EMAIL_USER}`);
     } catch (err) {
-      console.error("❌ Gmail transporter failed:", err.message);
+      console.error("❌ Gmail transporter verification failed:", err.message);
+      console.error("❌ Please check your EMAIL_USER and EMAIL_PASS credentials");
+      transporter = null;
     }
   } else {
     // --- Ethereal setup (for local development) ---
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    console.log("📨 Using Ethereal test email account");
-    console.log(`👉 View emails at: https://ethereal.email/login`);
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: "smtp.ethereal.email",
+        port: 587,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+      console.log("📨 Using Ethereal test email account");
+      console.log(`👉 View emails at: https://ethereal.email/login`);
+      console.log(`📧 Test account: ${testAccount.user}`);
+    } catch (err) {
+      console.error("❌ Failed to create Ethereal test account:", err.message);
+      transporter = null;
+    }
   }
 }
 await initTransporter();
 
 // ✅ Helper function to send customer confirmation email
 async function sendCustomerConfirmation(order, cart, customerInfo, user, subtotal, total) {
-  if (!transporter || !customerInfo.email) return;
+  // Check if transporter is initialized
+  if (!transporter) {
+    console.error("❌ Email transporter not initialized. Cannot send email.");
+    return { success: false, error: "Email transporter not initialized" };
+  }
+  
+  // Check if customer email exists
+  if (!customerInfo?.email) {
+    console.error("❌ Customer email missing. Cannot send confirmation email.", { 
+      orderId: order._id, 
+      orderRef: order.ref,
+      customerInfo 
+    });
+    return { success: false, error: "Customer email missing" };
+  }
+  
+  console.log(`📧 Attempting to send confirmation email to ${customerInfo.email} for order ${order.ref}`);
   
   const desiredTime = customerInfo.desiredTime || "So schnell wie möglich";
   const commentBlock = customerInfo?.notes
@@ -224,15 +256,32 @@ async function sendCustomerConfirmation(order, cart, customerInfo, user, subtota
   };
 
   try {
+    console.log(`📧 Sending email to ${customerInfo.email}...`);
+    console.log(`📧 Email subject: ${mailOptions.subject}`);
+    console.log(`📧 Email from: ${mailOptions.from}`);
+    
     const info = await transporter.sendMail(mailOptions);
+    
     if (process.env.NODE_ENV !== "production") {
-      console.log("📨 Preview email at:", nodemailer.getTestMessageUrl(info));
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      console.log("📨 Preview email at:", previewUrl);
+      console.log(`✅ Confirmation email sent to ${customerInfo.email} (test mode - check Ethereal)`);
     } else {
-      console.log(`✅ Confirmation email sent to ${customerInfo.email}`);
+      console.log(`✅ Confirmation email sent successfully to ${customerInfo.email}`);
+      console.log(`📧 Message ID: ${info.messageId}`);
     }
-    return { success: true };
+    return { success: true, messageId: info.messageId };
   } catch (err) {
     console.error("❌ Customer email send failed:", err.message);
+    console.error("❌ Full error details:", err);
+    console.error("❌ Email config check:", {
+      hasTransporter: !!transporter,
+      emailTo: customerInfo.email,
+      emailFrom: mailOptions.from,
+      isProduction: process.env.NODE_ENV === "production",
+      hasEmailUser: !!process.env.EMAIL_USER,
+      hasEmailPass: !!process.env.EMAIL_PASS
+    });
     return { success: false, error: err.message };
   }
 }
@@ -621,6 +670,14 @@ r.post("/:id/confirm", requireAdmin, async (req, res) => {
       });
     }
 
+    // Log order details before sending email
+    console.log(`📧 Order confirmation requested for order ${order.ref}`);
+    console.log(`📧 Order customer email: ${order.customer?.email || "MISSING"}`);
+    console.log(`📧 Order customer name: ${order.customer?.name || "MISSING"}`);
+    console.log(`📧 User email: ${user?.email || "MISSING"}`);
+    console.log(`📧 Transporter available: ${!!transporter}`);
+    console.log(`📧 Environment: ${process.env.NODE_ENV || "development"}`);
+    
     // Send response immediately (don't wait for email)
     res.json({
       success: true,
@@ -637,13 +694,16 @@ r.post("/:id/confirm", requireAdmin, async (req, res) => {
       subtotal,
       total
     ).then((emailResult) => {
-      if (emailResult.success) {
-        console.log(`✅ Confirmation email sent to ${order.customer.email}`);
+      if (emailResult && emailResult.success) {
+        console.log(`✅ Confirmation email sent successfully to ${order.customer.email} for order ${order.ref}`);
       } else {
-        console.error(`❌ Failed to send confirmation email to ${order.customer.email}:`, emailResult.error);
+        const errorMsg = emailResult?.error || "Unknown error";
+        console.error(`❌ Failed to send confirmation email to ${order.customer.email} for order ${order.ref}:`, errorMsg);
+        console.error("Email result:", emailResult);
       }
     }).catch((err) => {
-      console.error(`❌ Error sending confirmation email to ${order.customer.email}:`, err.message);
+      console.error(`❌ Error sending confirmation email to ${order.customer?.email || "unknown"} for order ${order.ref}:`, err.message);
+      console.error("Full error:", err);
     });
   } catch (err) {
     console.error("❌ Error confirming order:", err);

@@ -12,6 +12,8 @@ export default function AdminOrderNotification({ onNavigate }) {
   const [confirmingOrderId, setConfirmingOrderId] = useState(null);
   const [orders, setOrders] = useState([]);
   const [userDismissedPopup, setUserDismissedPopup] = useState(false);
+  // Track recently confirmed orders to prevent them from showing again
+  const recentlyConfirmedRef = useRef(new Set());
   
   // Sound notification refs
   const audioContextRef = useRef(null);
@@ -142,9 +144,24 @@ export default function AdminOrderNotification({ onNavigate }) {
       // Update orders list
       setOrders(ordersList);
       
+      // Filter out recently confirmed orders
+      const filteredOrders = ordersList.filter((order) => {
+        const orderId = order._id || order.ref;
+        return !recentlyConfirmedRef.current.has(orderId);
+      });
+      
+      // If current popup is a recently confirmed order, close it
+      if (newOrderPopup) {
+        const currentPopupOrderId = newOrderPopup._id || newOrderPopup.ref;
+        if (recentlyConfirmedRef.current.has(currentPopupOrderId)) {
+          console.log("🔔 AdminOrderNotification: Closing popup for recently confirmed order", currentPopupOrderId);
+          setNewOrderPopup(null);
+        }
+      }
+      
       // If there are unconfirmed orders, show the first one (or force show if requested)
-      if (ordersList.length > 0) {
-        const currentOrder = ordersList[0];
+      if (filteredOrders.length > 0) {
+        const currentOrder = filteredOrders[0];
         const orderId = currentOrder._id || currentOrder.ref;
         const showCount = popupShowCountRef.current.get(orderId) || 0;
         const maxReminders = 3;
@@ -296,11 +313,44 @@ export default function AdminOrderNotification({ onNavigate }) {
       // Reset show count for this order since it's confirmed
       popupShowCountRef.current.delete(orderId);
       
-      // Refresh orders (this will update the popup or close it if no more unconfirmed orders)
-      await fetchOrders();
+      // Mark this order as recently confirmed to prevent it from showing again
+      recentlyConfirmedRef.current.add(orderId);
       
-      // Show success message
+      // Close current popup immediately
+      setNewOrderPopup(null);
+      
+      // Remove this order from the orders list immediately (optimistic update)
+      setOrders((prevOrders) => prevOrders.filter((o) => (o._id || o.ref) !== orderId));
+      
+      // Reset dismissal flags so next order can show automatically
+      setUserDismissedPopup(false);
+      userDismissedRef.current = false;
+      
+      // Clear any existing dismiss timeout
+      if (dismissTimeoutRef.current) {
+        clearTimeout(dismissTimeoutRef.current);
+        dismissTimeoutRef.current = null;
+      }
+      
+      // Clear the reminder timer
+      if (popupTimerRef.current) {
+        clearInterval(popupTimerRef.current);
+        popupTimerRef.current = null;
+      }
+      
+      // Show success message first
       alert("Bestellung bestätigt! Der Kunde hat eine Bestätigungs-E-Mail erhalten.");
+      
+      // Wait a moment for backend to process, then fetch next order
+      // This ensures the backend has updated the order status before we fetch
+      setTimeout(async () => {
+        await fetchOrders(true); // Force show popup for next order
+        
+        // Remove from recently confirmed set after 10 seconds (order should be filtered by backend by then)
+        setTimeout(() => {
+          recentlyConfirmedRef.current.delete(orderId);
+        }, 10000);
+      }, 500);
     } catch (err) {
       alert(`Fehler: ${err.message}`);
     } finally {

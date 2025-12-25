@@ -817,11 +817,6 @@ export default function CheckoutPayment({ onNavigate }) {
                 <span className={deliveryFeeInfo.eligible || confirmation ? "" : "text-red-600"}>
                   {delivery.toFixed(2)} €
                 </span>
-                {deliveryFeeInfo.distanceKm > 0 && (
-                  <div className="text-xs text-gray-500">
-                    ({deliveryFeeInfo.distanceKm.toFixed(1)} km)
-                  </div>
-                )}
               </div>
             </div>
             {!deliveryFeeInfo.eligible && deliveryFeeInfo.reason && !confirmation && (

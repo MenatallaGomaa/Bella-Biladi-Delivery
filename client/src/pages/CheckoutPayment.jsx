@@ -546,13 +546,27 @@ export default function CheckoutPayment({ onNavigate }) {
         return;
       }
       
-      // Get current ID from database by name
-      const itemId = nameToIdMap.get(item.name);
+      // Get current ID from database by name, or use existing ID if not found
+      // Restaurant always has everything available, so we trust the cart items
+      let itemId = nameToIdMap.get(item.name);
+      
+      // If not found by exact name match, try to find by partial match or use existing ID
       if (!itemId) {
-        setSubmitError(
-          `Artikel "${item.name}" konnte nicht gefunden werden. Bitte entferne ihn aus dem Warenkorb.`
-        );
-        return;
+        // Try to find by base name (before any modifiers like "- Käse: Veganer Käse")
+        const baseName = item.name.split(' - ')[0].split(':')[0].trim();
+        itemId = nameToIdMap.get(baseName);
+        
+        // If still not found, use the existing item ID from cart
+        if (!itemId && (item._id || item.id)) {
+          itemId = String(item._id || item.id);
+          console.log(`⚠️ Item "${item.name}" not found in database, using existing ID: ${itemId}`);
+        }
+      }
+      
+      // If we still don't have an ID, skip this item (shouldn't happen, but be safe)
+      if (!itemId) {
+        console.warn(`⚠️ Could not find ID for item: ${item.name}, skipping`);
+        continue;
       }
       
       // Ensure qty is a valid number

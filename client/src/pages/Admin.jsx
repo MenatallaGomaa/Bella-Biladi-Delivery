@@ -302,6 +302,89 @@ export default function Admin({ onNavigate }) {
     }
   };
 
+  const handleEditDriver = (driver) => {
+    setEditingDriverId(driver._id);
+    setDriverForm({
+      name: driver.name || "",
+      phone: driver.phone || "",
+      email: driver.email || "",
+    });
+    setDriversError("");
+  };
+
+  const handleDeleteDriver = async (driverId) => {
+    if (!window.confirm("Möchten Sie diesen Fahrer wirklich löschen?")) return;
+    
+    try {
+      setDriversError("");
+      const res = await fetch(`${API_BASE}/api/drivers/${driverId}`, {
+        method: "DELETE",
+        headers,
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Fahrer konnte nicht gelöscht werden");
+      }
+      
+      setDriverFeedback("Fahrer erfolgreich gelöscht");
+      fetchDrivers();
+    } catch (err) {
+      setDriversError(err.message);
+    }
+  };
+
+  const handleDriverSubmit = async (e) => {
+    e.preventDefault();
+    if (!token || !canAccess) return;
+    
+    try {
+      setDriversError("");
+      
+      if (!driverForm.name.trim() || !driverForm.phone.trim()) {
+        setDriversError("Name und Telefonnummer sind erforderlich");
+        return;
+      }
+
+      if (editingDriverId) {
+        // Update existing driver
+        const res = await fetch(`${API_BASE}/api/drivers/${editingDriverId}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify(driverForm),
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Fahrer konnte nicht aktualisiert werden");
+        }
+        
+        setDriverFeedback("Fahrer erfolgreich aktualisiert");
+      } else {
+        // Create new driver
+        const res = await fetch(`${API_BASE}/api/drivers`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(driverForm),
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Fahrer konnte nicht erstellt werden");
+        }
+        
+        setDriverFeedback("Fahrer erfolgreich erstellt");
+      }
+      
+      // Reset form
+      setDriverForm({ name: "", phone: "", email: "" });
+      setEditingDriverId(null);
+      fetchDrivers();
+    } catch (err) {
+      setDriversError(err.message);
+    }
+  };
+
   const updateOrderStatus = async (id, newStatus) => {
     if (!token) return;
     await fetch(`${API_BASE}/api/orders/${id}`, {
@@ -662,11 +745,13 @@ export default function Admin({ onNavigate }) {
                               className="select-clean text-sm min-w-[150px]"
                             >
                               <option value="">Kein Fahrer</option>
-                              {drivers.map((driver) => (
-                                <option key={driver._id} value={driver._id}>
-                                  {driver.name} {driver.phone ? `(${driver.phone})` : ""}
-                                </option>
-                              ))}
+                              {[...drivers]
+                                .sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" }))
+                                .map((driver) => (
+                                  <option key={driver._id} value={driver._id}>
+                                    {driver.name} {driver.phone ? `(${driver.phone})` : ""}
+                                  </option>
+                                ))}
                             </select>
                           </div>
                           <div className="flex items-center gap-2">

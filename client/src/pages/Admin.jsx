@@ -149,10 +149,12 @@ export default function Admin({ onNavigate }) {
     });
   }, [items, itemSearch]);
 
-  const fetchDrivers = useCallback(async () => {
+  const fetchDrivers = useCallback(async (showLoading = false) => {
     if (!token || !canAccess) return;
     try {
-      setDriversLoading(true);
+      if (showLoading) {
+        setDriversLoading(true);
+      }
       setDriversError("");
       const res = await fetch(`${API_BASE}/api/drivers`, { headers });
       if (!res.ok) throw new Error("Fahrer konnten nicht geladen werden");
@@ -166,15 +168,17 @@ export default function Admin({ onNavigate }) {
       setDriversError(err.message);
       setDrivers([]);
     } finally {
-      setDriversLoading(false);
+      if (showLoading) {
+        setDriversLoading(false);
+      }
     }
   }, [token, canAccess, headers]);
 
   useEffect(() => {
     if (activeTab === "orders") {
       fetchOrders();
-      // Also fetch drivers when on orders tab so we can assign them
-      fetchDrivers();
+      // Also fetch drivers when on orders tab so we can assign them (silent, no loading)
+      fetchDrivers(false);
     }
   }, [activeTab, fetchOrders, fetchDrivers]);
 
@@ -265,10 +269,10 @@ export default function Admin({ onNavigate }) {
 
   useEffect(() => {
     if (activeTab === "drivers") {
-      fetchDrivers();
-      // Poll for driver location updates every 5 seconds
+      fetchDrivers(true); // Show loading on initial fetch
+      // Poll for driver location updates every 5 seconds (silent refresh, no loading indicator)
       const interval = setInterval(() => {
-        fetchDrivers();
+        fetchDrivers(false); // Don't show loading on polling updates
       }, 5000);
       return () => clearInterval(interval);
     }
@@ -291,9 +295,9 @@ export default function Admin({ onNavigate }) {
       
       // Refresh orders to show updated driver assignment
       fetchOrders(true);
-      // Also refresh drivers to show updated current order
+      // Also refresh drivers to show updated current order (silent, no loading)
       if (activeTab === "drivers") {
-        fetchDrivers();
+        fetchDrivers(false);
       }
     } catch (err) {
       console.error("Error assigning driver:", err);
@@ -327,7 +331,7 @@ export default function Admin({ onNavigate }) {
       }
       
       setDriverFeedback("Fahrer erfolgreich gelöscht");
-      fetchDrivers();
+      fetchDrivers(false); // Silent refresh, no loading indicator
     } catch (err) {
       setDriversError(err.message);
     }
@@ -378,7 +382,7 @@ export default function Admin({ onNavigate }) {
       // Reset form
       setDriverForm({ name: "", phone: "", email: "" });
       setEditingDriverId(null);
-      fetchDrivers();
+      fetchDrivers(false); // Silent refresh, no loading indicator
     } catch (err) {
       setDriversError(err.message);
     }

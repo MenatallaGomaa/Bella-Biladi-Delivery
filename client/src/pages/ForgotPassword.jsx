@@ -26,13 +26,27 @@ export default function ForgotPassword({ onNavigate }) {
     setLoading(true);
     try {
       const result = await requestPasswordReset(trimmed);
-      setSuccess(true);
-      // In development, show Ethereal preview URL
-      if (result?.previewUrl) {
-        setPreviewUrl(result.previewUrl);
-      }
-      if (result?.resetUrl) {
-        setResetUrl(result.resetUrl);
+      
+      // Check if email was actually sent (in development mode)
+      if (result?.success === false) {
+        setError(result?.emailError || result?.message || "E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.");
+        // Still show reset URL in development for testing purposes
+        if (result?.resetUrl) {
+          setResetUrl(result.resetUrl);
+        }
+      } else {
+        setSuccess(true);
+        // In development, show Ethereal preview URL
+        if (result?.previewUrl) {
+          setPreviewUrl(result.previewUrl);
+        }
+        if (result?.resetUrl) {
+          setResetUrl(result.resetUrl);
+        }
+        // Show email error as warning if present (but still show success)
+        if (result?.emailError) {
+          console.warn("Email error (but request succeeded):", result.emailError);
+        }
       }
     } catch (err) {
       setError(err.message || "Etwas ist schief gelaufen");
@@ -83,7 +97,7 @@ export default function ForgotPassword({ onNavigate }) {
             </div>
             {resetUrl && !previewUrl && (
               <div className="rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-700">
-                <p className="font-semibold mb-2">Direkter Reset-Link:</p>
+                <p className="font-semibold mb-2">Direkter Reset-Link (für Tests):</p>
                 <button
                   onClick={() => {
                     window.location.href = resetUrl;
@@ -94,6 +108,24 @@ export default function ForgotPassword({ onNavigate }) {
                 </button>
               </div>
             )}
+          </div>
+        ) : resetUrl ? (
+          <div className="space-y-4">
+            <div className="rounded border border-yellow-300 bg-yellow-100 px-3 py-3 text-sm text-yellow-700">
+              <p className="mb-2 font-semibold">⚠️ E-Mail konnte nicht gesendet werden</p>
+              <p className="mb-3">Sie können den Reset-Link jedoch direkt verwenden:</p>
+            </div>
+            <div className="rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+              <p className="font-semibold mb-2">Direkter Reset-Link:</p>
+              <button
+                onClick={() => {
+                  window.location.href = resetUrl;
+                }}
+                className="text-blue-600 underline hover:text-blue-800 break-all text-left"
+              >
+                {resetUrl}
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

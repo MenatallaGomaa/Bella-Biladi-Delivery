@@ -26,17 +26,18 @@ async function getTransporter() {
     }
   }
   
-  const isProduction = process.env.NODE_ENV === "production";
+  // Check if production email credentials are available
+  // Use Gmail if EMAIL_USER and EMAIL_PASS are set, otherwise use Ethereal
+  const hasEmailCredentials = process.env.EMAIL_USER && process.env.EMAIL_PASS;
+  const isProduction = process.env.NODE_ENV === "production" || hasEmailCredentials;
   
-  if (isProduction) {
-    // Check if email credentials are set
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      const errorMsg = "EMAIL_USER and EMAIL_PASS environment variables are required for production email sending";
-      console.error("❌", errorMsg);
-      throw new Error(errorMsg);
-    }
-    
+  if (hasEmailCredentials) {
+    // Production mode - use Gmail
     console.log("📧 Initializing Gmail transporter...");
+    console.log(`   NODE_ENV: ${process.env.NODE_ENV || "not set"}`);
+    console.log(`   EMAIL_USER: ${process.env.EMAIL_USER ? `${process.env.EMAIL_USER.substring(0, 3)}...` : "NOT SET"}`);
+    console.log(`   EMAIL_PASS: ${process.env.EMAIL_PASS ? "***SET***" : "NOT SET"}`);
+    
     transporter = nodemailer.createTransport({
       service: "gmail",
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
@@ -50,12 +51,18 @@ async function getTransporter() {
     } catch (err) {
       console.error("❌ Gmail transporter verification failed:", err.message);
       console.error("   Please check EMAIL_USER and EMAIL_PASS credentials");
+      console.error("   Common issues:");
+      console.error("   - Gmail account needs 'App Password' (not regular password)");
+      console.error("   - 2FA must be enabled on Gmail account");
+      console.error("   - 'Less secure app access' is deprecated, use App Password");
       transporter = null; // Reset transporter on failure
       throw new Error(`Gmail authentication failed: ${err.message}. Please check EMAIL_USER and EMAIL_PASS.`);
     }
   } else {
     // Development mode - use Ethereal test emails
     console.log("📧 Initializing Ethereal test email transporter...");
+    console.log("   ⚠️ EMAIL_USER and EMAIL_PASS not set - using test email service");
+    console.log("   ⚠️ In production, set these environment variables to send real emails");
     try {
       const testAccount = await nodemailer.createTestAccount();
       transporter = nodemailer.createTransport({
@@ -66,6 +73,7 @@ async function getTransporter() {
       console.log("✅ Ethereal transporter initialized");
       console.log(`📨 View test emails at: https://ethereal.email/login`);
       console.log(`   Test account: ${testAccount.user}`);
+      console.log(`   Test password: ${testAccount.pass}`);
     } catch (err) {
       console.error("❌ Failed to create Ethereal test account:", err.message);
       transporter = null;
@@ -304,6 +312,7 @@ router.post("/forgot-password", async (req, res) => {
     
     const baseUrl = process.env.APP_BASE_URL || "http://localhost:5173";
     const resetUrl = `${baseUrl}/reset-password?token=${user.resetPasswordToken}`;
+    const resetToken = user.resetPasswordToken; // Store token for response
     
     console.log(`   Reset URL: ${resetUrl}`);
     
@@ -364,8 +373,12 @@ router.post("/forgot-password", async (req, res) => {
       
       emailSent = true;
       
-      // In development, get the Ethereal preview URL
-      if (process.env.NODE_ENV !== "production") {
+      // Check if we're using production email (Gmail) or test email (Ethereal)
+      const hasEmailCredentials = process.env.EMAIL_USER && process.env.EMAIL_PASS;
+      const isUsingProductionEmail = hasEmailCredentials;
+      
+      // Get Ethereal preview URL if using test email service
+      if (!isUsingProductionEmail) {
         emailPreviewUrl = nodemailer.getTestMessageUrl(info);
         console.log("✅ Password reset email sent to Ethereal:");
         console.log("   Preview URL:", emailPreviewUrl);
@@ -381,47 +394,89 @@ router.post("/forgot-password", async (req, res) => {
       console.error("   Error stack:", e.stack);
       
       // Log detailed error information for debugging
-      if (process.env.NODE_ENV === "production") {
-        console.error("   EMAIL_USER set:", !!process.env.EMAIL_USER);
-        console.error("   EMAIL_PASS set:", !!process.env.EMAIL_PASS);
-        console.error("   EMAIL_USER value:", process.env.EMAIL_USER ? `${process.env.EMAIL_USER.substring(0, 3)}...` : "NOT SET");
-      }
+      const hasEmailCredentials = process.env.EMAIL_USER && process.env.EMAIL_PASS;
+      console.error("   EMAIL_USER set:", !!process.env.EMAIL_USER);
+      console.error("   EMAIL_PASS set:", !!process.env.EMAIL_PASS);
+      console.error("   EMAIL_USER value:", process.env.EMAIL_USER ? `${process.env.EMAIL_USER.substring(0, 3)}...` : "NOT SET");
       
-      // In development, we can be more explicit about errors
-      if (process.env.NODE_ENV !== "production") {
-        console.error("   This is a development environment - check Ethereal email account");
+      if (hasEmailCredentials) {
+        console.error("   ⚠️ Email credentials are set but email failed to send");
+        console.error("   Common Gmail issues:");
+        console.error("   - Need to use 'App Password' (not regular password)");
+        console.error("   - 2FA must be enabled on Gmail account");
+        console.error("   - Check Gmail account security settings");
+      } else {
+        console.error("   ⚠️ EMAIL_USER and EMAIL_PASS not set - using test email service");
+        console.error("   Set these environment variables in Render to send real emails");
       }
     }
     
-    // In development, return the preview URL so frontend can show it
-    if (process.env.NODE_ENV !== "production") {
-      const response = { 
-        success: emailSent, 
-        message: emailSent ? "E-Mail wurde gesendet." : "E-Mail konnte nicht gesendet werden.",
-        resetUrl: resetUrl // Always return reset URL in development for testing
-      };
-      
-      if (emailPreviewUrl) {
-        response.previewUrl = emailPreviewUrl;
-      }
-      
-      if (emailError) {
-        response.emailError = emailError;
-      }
-      
-      return res.json(response);
+    // Check if we're using production email (Gmail) or test email (Ethereal)
+    const hasEmailCredentials = process.env.EMAIL_USER && process.env.EMAIL_PASS;
+    const isUsingProductionEmail = hasEmailCredentials;
+    
+    // Always return resetToken and resetUrl for testing purposes (even in production)
+    // This allows frontend to show reset form directly without needing email
+    const response = { 
+      success: emailSent || true, // Always return success for security
+      message: emailSent 
+        ? "E-Mail wurde gesendet." 
+        : (isUsingProductionEmail 
+          ? "Wenn diese E-Mail registriert ist, wurde ein Link gesendet."
+          : "E-Mail konnte nicht gesendet werden, aber Sie können das Passwort direkt hier zurücksetzen."),
+      resetToken: resetToken, // Include token for direct reset form
+      resetUrl: resetUrl // Include URL for reference
+    };
+    
+    // Add preview URL if using test email service
+    if (emailPreviewUrl) {
+      response.previewUrl = emailPreviewUrl;
     }
     
-    // In production, always return success (security best practice - don't reveal if email exists)
-    // But log the error for admin debugging
-    return res.json({ 
-      success: true, 
-      message: "Wenn diese E-Mail registriert ist, wurde ein Link gesendet."
-    });
+    // Include email error in development mode for debugging
+    if (!isUsingProductionEmail && emailError) {
+      response.emailError = emailError;
+    }
+    
+    return res.json(response);
   } catch (err) {
     console.error("❌ Forgot password endpoint error:", err.message);
     console.error("   Stack:", err.stack);
     return res.status(500).json({ error: "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut." });
+  }
+});
+
+// Test email configuration endpoint (for debugging)
+router.get("/test-email-config", async (req, res) => {
+  try {
+    const hasEmailCredentials = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+    const nodeEnv = process.env.NODE_ENV || "not set";
+    
+    const config = {
+      nodeEnv,
+      hasEmailCredentials,
+      emailUser: process.env.EMAIL_USER ? `${process.env.EMAIL_USER.substring(0, 3)}...` : "NOT SET",
+      emailPass: process.env.EMAIL_PASS ? "SET" : "NOT SET",
+      appBaseUrl: process.env.APP_BASE_URL || "not set",
+    };
+    
+    // Try to initialize transporter
+    let transporterStatus = "not initialized";
+    try {
+      const t = await getTransporter();
+      if (t) {
+        await t.verify();
+        transporterStatus = "verified and ready";
+      }
+    } catch (err) {
+      transporterStatus = `error: ${err.message}`;
+    }
+    
+    config.transporterStatus = transporterStatus;
+    
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

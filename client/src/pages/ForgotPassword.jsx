@@ -2,13 +2,21 @@ import { useState } from "react";
 import { useAuth } from "./AuthContext";
 
 export default function ForgotPassword({ onNavigate }) {
-  const { requestPasswordReset } = useAuth();
+  const { requestPasswordReset, resetPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [resetUrl, setResetUrl] = useState(null);
+  const [resetToken, setResetToken] = useState(null);
+  
+  // Reset password form state
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,6 +24,11 @@ export default function ForgotPassword({ onNavigate }) {
     setSuccess(false);
     setPreviewUrl(null);
     setResetUrl(null);
+    setResetToken(null);
+    setPassword("");
+    setConfirmPassword("");
+    setResetError("");
+    setResetSuccess(false);
 
     const trimmed = email.trim();
     if (!trimmed) {
@@ -34,8 +47,15 @@ export default function ForgotPassword({ onNavigate }) {
         if (result?.resetUrl) {
           setResetUrl(result.resetUrl);
         }
+        if (result?.resetToken) {
+          setResetToken(result.resetToken);
+        }
       } else {
         setSuccess(true);
+        // Store reset token to show reset form directly
+        if (result?.resetToken) {
+          setResetToken(result.resetToken);
+        }
         // In development, show Ethereal preview URL
         if (result?.previewUrl) {
           setPreviewUrl(result.previewUrl);
@@ -55,6 +75,32 @@ export default function ForgotPassword({ onNavigate }) {
     }
   };
 
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetError("");
+    
+    const trimmed = password.trim();
+    if (trimmed.length < 6) {
+      setResetError("Das neue Passwort muss mindestens 6 Zeichen lang sein.");
+      return;
+    }
+    if (trimmed !== confirmPassword.trim()) {
+      setResetError("Die Passwörter stimmen nicht überein.");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await resetPassword(resetToken, trimmed);
+      setResetSuccess(true);
+      setTimeout(() => onNavigate("CheckoutLogin"), 2500);
+    } catch (err) {
+      setResetError(err.message || "Passwort konnte nicht zurückgesetzt werden.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-amber-200 px-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
@@ -69,7 +115,11 @@ export default function ForgotPassword({ onNavigate }) {
           </div>
         )}
 
-        {success ? (
+        {resetSuccess ? (
+          <div className="rounded border border-green-300 bg-green-100 px-3 py-3 text-sm text-green-700">
+            Passwort erfolgreich aktualisiert! Du wirst gleich zum Login weitergeleitet.
+          </div>
+        ) : resetToken ? (
           <div className="space-y-4">
             <div className="rounded border border-green-300 bg-green-100 px-3 py-3 text-sm text-green-700">
               {previewUrl ? (
@@ -84,48 +134,58 @@ export default function ForgotPassword({ onNavigate }) {
                   >
                     📧 E-Mail-Vorschau öffnen
                   </a>
-                  {resetUrl && (
-                    <div className="mt-3 p-2 bg-gray-50 rounded border">
-                      <p className="text-xs text-gray-600 mb-1">Oder kopieren Sie diesen Link:</p>
-                      <code className="text-xs break-all text-blue-600">{resetUrl}</code>
-                    </div>
-                  )}
                 </>
               ) : (
-                <p>Wir haben dir (falls vorhanden) eine E-Mail mit weiteren Schritten geschickt. Bitte überprüfe dein Postfach und klicke auf den Link in der E-Mail.</p>
+                <p className="mb-2 font-semibold">✅ Reset-Link wurde generiert!</p>
+                <p>Sie können Ihr Passwort direkt hier zurücksetzen:</p>
               )}
             </div>
-            {resetUrl && !previewUrl && (
-              <div className="rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-700">
-                <p className="font-semibold mb-2">Direkter Reset-Link (für Tests):</p>
+            
+            {/* Reset Password Form */}
+            <div className="border-t pt-4">
+              <h2 className="text-lg font-semibold mb-3">Passwort zurücksetzen</h2>
+              {resetError && (
+                <div className="mb-4 rounded border border-red-300 bg-red-100 px-3 py-2 text-sm text-red-700">
+                  {resetError}
+                </div>
+              )}
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <input
+                  type="password"
+                  placeholder="Neues Passwort"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Passwort bestätigen"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  required
+                />
                 <button
-                  onClick={() => {
-                    window.location.href = resetUrl;
-                  }}
-                  className="text-blue-600 underline hover:text-blue-800 break-all text-left"
+                  type="submit"
+                  disabled={resetLoading}
+                  className="w-full rounded-lg bg-amber-400 py-2 text-sm font-semibold transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {resetUrl}
+                  {resetLoading ? "Speichern…" : "Passwort speichern"}
                 </button>
+              </form>
+            </div>
+            
+            {resetUrl && (
+              <div className="mt-3 p-2 bg-gray-50 rounded border">
+                <p className="text-xs text-gray-600 mb-1">Oder verwenden Sie diesen Link:</p>
+                <code className="text-xs break-all text-blue-600">{resetUrl}</code>
               </div>
             )}
           </div>
-        ) : resetUrl ? (
-          <div className="space-y-4">
-            <div className="rounded border border-yellow-300 bg-yellow-100 px-3 py-3 text-sm text-yellow-700">
-              <p className="mb-2 font-semibold">⚠️ E-Mail konnte nicht gesendet werden</p>
-              <p className="mb-3">Sie können den Reset-Link jedoch direkt verwenden:</p>
-            </div>
-            <div className="rounded border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-700">
-              <p className="font-semibold mb-2">Direkter Reset-Link:</p>
-              <button
-                onClick={() => {
-                  window.location.href = resetUrl;
-                }}
-                className="text-blue-600 underline hover:text-blue-800 break-all text-left"
-              >
-                {resetUrl}
-              </button>
-            </div>
+        ) : success ? (
+          <div className="rounded border border-green-300 bg-green-100 px-3 py-3 text-sm text-green-700">
+            <p>Wir haben dir (falls vorhanden) eine E-Mail mit weiteren Schritten geschickt. Bitte überprüfe dein Postfach und klicke auf den Link in der E-Mail.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

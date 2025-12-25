@@ -140,8 +140,10 @@ export default function Admin({ onNavigate }) {
   useEffect(() => {
     if (activeTab === "orders") {
       fetchOrders();
+      // Also fetch drivers when on orders tab so we can assign them
+      fetchDrivers();
     }
-  }, [activeTab, fetchOrders]);
+  }, [activeTab, fetchOrders, fetchDrivers]);
 
   // Set up WebSocket connection for real-time order updates
   useEffect(() => {
@@ -255,6 +257,33 @@ export default function Admin({ onNavigate }) {
       return () => clearInterval(interval);
     }
   }, [activeTab, fetchDrivers]);
+
+  const assignDriverToOrder = async (orderId, driverId) => {
+    if (!token || !canAccess) return;
+    try {
+      if (!driverId) {
+        // Unassign driver - need to implement unassign endpoint or handle here
+        return;
+      }
+      
+      const res = await fetch(`${API_BASE}/api/drivers/${driverId}/assign-order/${orderId}`, {
+        method: "POST",
+        headers,
+      });
+      
+      if (!res.ok) throw new Error("Fahrer konnte nicht zugewiesen werden");
+      
+      // Refresh orders to show updated driver assignment
+      fetchOrders(true);
+      // Also refresh drivers to show updated current order
+      if (activeTab === "drivers") {
+        fetchDrivers();
+      }
+    } catch (err) {
+      console.error("Error assigning driver:", err);
+      alert(`Fehler: ${err.message}`);
+    }
+  };
 
   const updateOrderStatus = async (id, newStatus) => {
     if (!token) return;
@@ -577,6 +606,19 @@ export default function Admin({ onNavigate }) {
                             <strong>Hinweis:</strong> {order.customer.notes}
                           </div>
                         )}
+                        {order.driverId && (
+                          <div className="mt-2">
+                            <span className="text-sm font-medium">Fahrer: </span>
+                            <span className="text-sm font-semibold text-blue-600">
+                              {typeof order.driverId === 'object' ? order.driverId.name : "Zugewiesen"}
+                            </span>
+                            {typeof order.driverId === 'object' && order.driverId.phone && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                ({order.driverId.phone})
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="mt-2">
                           <span className="text-sm font-medium">Status: </span>
                           <span className="text-sm font-semibold text-amber-600">
@@ -594,22 +636,39 @@ export default function Admin({ onNavigate }) {
                             {confirmingOrderId === order._id ? "Wird bestätigt..." : "✅ Bestätigen"}
                           </button>
                         )}
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Status ändern:</span>
-                          <select
-                            value={order.status}
-                            onChange={(e) =>
-                              updateOrderStatus(order._id, e.target.value)
-                            }
-                            className="select-clean"
-                          >
-                            <option value="new">neu</option>
-                            <option value="accepted">akzeptiert</option>
-                            <option value="preparing">in Bearbeitung</option>
-                            <option value="on_the_way">unterwegs</option>
-                            <option value="delivered">geliefert</option>
-                            <option value="canceled">storniert</option>
-                          </select>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Fahrer:</span>
+                            <select
+                              value={order.driverId?._id || order.driverId || ""}
+                              onChange={(e) => assignDriverToOrder(order._id, e.target.value)}
+                              className="select-clean text-sm min-w-[150px]"
+                            >
+                              <option value="">Kein Fahrer</option>
+                              {drivers.map((driver) => (
+                                <option key={driver._id} value={driver._id}>
+                                  {driver.name} {driver.phone ? `(${driver.phone})` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Status ändern:</span>
+                            <select
+                              value={order.status}
+                              onChange={(e) =>
+                                updateOrderStatus(order._id, e.target.value)
+                              }
+                              className="select-clean"
+                            >
+                              <option value="new">neu</option>
+                              <option value="accepted">akzeptiert</option>
+                              <option value="preparing">in Bearbeitung</option>
+                              <option value="on_the_way">unterwegs</option>
+                              <option value="delivered">geliefert</option>
+                              <option value="canceled">storniert</option>
+                            </select>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -964,7 +1023,9 @@ export default function Admin({ onNavigate }) {
                                 }
                               : null
                           }
-                          orderId={driver._id}
+                          customerAddress={driver.currentOrder?.customer?.address}
+                          orderId={driver.currentOrder?._id || driver._id}
+                          orderStatus={driver.currentOrder?.status}
                           height="256px"
                         />
                       </div>

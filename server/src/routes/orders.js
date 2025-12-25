@@ -606,7 +606,10 @@ r.get("/test-email", async (req, res) => {
 r.get("/", requireAdmin, async (req, res) => {
   const { status } = req.query;
   const q = status ? { status } : {};
-  const orders = await Order.find(q).sort({ createdAt: -1 }).limit(100);
+  const orders = await Order.find(q)
+    .populate("driverId", "name phone email") // Populate driver information
+    .sort({ createdAt: -1 })
+    .limit(100);
   res.json(orders);
 });
 

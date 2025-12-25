@@ -342,6 +342,7 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
                 driverLocation={driverLocation}
                 customerAddress={order.customer?.address}
                 orderId={orderId}
+                orderStatus={order.status}
                 height="300px"
               />
             )}

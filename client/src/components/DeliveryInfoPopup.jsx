@@ -99,7 +99,7 @@ export default function DeliveryInfoPopup({ onClose, showAtCheckout = false }) {
                   </h3>
                   <p className="text-green-700 text-sm leading-relaxed">
                     In den ersten <strong className="font-bold">3 Monaten</strong> (bis zum 8. März 2026) liefern wir 
-                    <strong className="font-semibold"> kostenlos bis 4 km</strong> von 
+                    <strong className="font-semibold"> kostenlos bis 2 km</strong> von 
                     Probstheidaer Straße 21!
                   </p>
                   <p className="text-green-600 text-xs mt-2 italic">

@@ -3,14 +3,36 @@ import { useState, useEffect } from "react";
 export default function DeliveryInfoPopup({ onClose, showAtCheckout = false }) {
   const [showPromotion, setShowPromotion] = useState(true);
 
-  // Check if promotion is still active (until March 8th, 2026)
+  // Calculate promotion end date (3 months from today)
+  const getPromotionEndDate = () => {
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setMonth(today.getMonth() + 3);
+    return endDate;
+  };
+
+  // Format date in German format (e.g., "8. März 2026")
+  const formatGermanDate = (date) => {
+    const months = [
+      "Januar", "Februar", "März", "April", "Mai", "Juni",
+      "Juli", "August", "September", "Oktober", "November", "Dezember"
+    ];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day}. ${month} ${year}`;
+  };
+
+  // Check if promotion is still active (3 months from today)
   const isPromotionActive = () => {
     const today = new Date();
-    const promotionEndDate = new Date(2026, 2, 8); // March 8, 2026 (month is 0-indexed)
+    const promotionEndDate = getPromotionEndDate();
     return today <= promotionEndDate;
   };
 
   const promotionActive = isPromotionActive();
+  const promotionEndDate = getPromotionEndDate();
+  const formattedEndDate = formatGermanDate(promotionEndDate);
 
   const deliveryPricing = [
     {
@@ -98,7 +120,7 @@ export default function DeliveryInfoPopup({ onClose, showAtCheckout = false }) {
                     🎉 Aktionsangebot: 3 Monate kostenlose Lieferung!
                   </h3>
                   <p className="text-green-700 text-sm leading-relaxed">
-                    In den ersten <strong className="font-bold">3 Monaten</strong> (bis zum 8. März 2026) liefern wir 
+                    In den ersten <strong className="font-bold">3 Monaten</strong> (bis zum {formattedEndDate}) liefern wir 
                     <strong className="font-semibold"> kostenlos bis 2 km</strong> von 
                     Probstheidaer Straße 21!
                   </p>

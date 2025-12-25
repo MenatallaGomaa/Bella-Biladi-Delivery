@@ -480,6 +480,42 @@ router.get("/test-email-config", async (req, res) => {
   }
 });
 
+// Direct password reset by email (for testing/admin - bypasses token)
+router.post("/reset-password-direct", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: "E-Mail und Passwort sind erforderlich" });
+    }
+    
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    
+    if (trimmedPassword.length < 6) {
+      return res.status(400).json({ error: "Das Passwort muss mindestens 6 Zeichen lang sein" });
+    }
+    
+    const user = await User.findOne({ email: trimmedEmail });
+    if (!user) {
+      // Don't reveal if user exists (security best practice)
+      return res.json({ success: true, message: "Wenn diese E-Mail registriert ist, wurde das Passwort zurückgesetzt." });
+    }
+    
+    user.passwordHash = await bcrypt.hash(trimmedPassword, 10);
+    // Clear any existing reset tokens
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    
+    console.log(`✅ Password reset directly for: ${user.email}`);
+    res.json({ success: true, message: "Passwort erfolgreich zurückgesetzt" });
+  } catch (err) {
+    console.error("❌ Direct password reset error:", err.message);
+    res.status(500).json({ error: "Ein Fehler ist aufgetreten" });
+  }
+});
+
 // Reset password
 router.post("/reset-password", async (req, res) => {
   const { token, password } = req.body;

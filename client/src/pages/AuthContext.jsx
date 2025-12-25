@@ -180,6 +180,19 @@ export function AuthProvider({ children }) {
     return true;
   };
 
+  const resetPasswordDirect = async (email, password) => {
+    const res = await fetch(createApiUrl(apiBase, "/api/reset-password-direct"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await parseJsonResponse(res).catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Passwort konnte nicht zurückgesetzt werden");
+    }
+    return data;
+  };
+
   const changePassword = async (currentPassword, newPassword) => {
     const token = localStorage.getItem("token");
     if (!token) throw new Error("Bitte melde dich erneut an");
@@ -235,6 +248,7 @@ export function AuthProvider({ children }) {
       refreshProfile,
       requestPasswordReset,
       resetPassword,
+      resetPasswordDirect,
       changePassword,
     }}>
       {children}

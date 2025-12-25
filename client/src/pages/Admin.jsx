@@ -137,6 +137,23 @@ export default function Admin({ onNavigate }) {
     });
   }, [items, itemSearch]);
 
+  const fetchDrivers = useCallback(async () => {
+    if (!token || !canAccess) return;
+    try {
+      setDriversLoading(true);
+      setDriversError("");
+      const res = await fetch(`${API_BASE}/api/drivers`, { headers });
+      if (!res.ok) throw new Error("Fahrer konnten nicht geladen werden");
+      const data = await res.json();
+      setDrivers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setDriversError(err.message);
+      setDrivers([]);
+    } finally {
+      setDriversLoading(false);
+    }
+  }, [token, canAccess, headers]);
+
   useEffect(() => {
     if (activeTab === "orders") {
       fetchOrders();
@@ -229,23 +246,6 @@ export default function Admin({ onNavigate }) {
       fetchItems();
     }
   }, [activeTab, fetchItems]);
-
-  const fetchDrivers = useCallback(async () => {
-    if (!token || !canAccess) return;
-    try {
-      setDriversLoading(true);
-      setDriversError("");
-      const res = await fetch(`${API_BASE}/api/drivers`, { headers });
-      if (!res.ok) throw new Error("Fahrer konnten nicht geladen werden");
-      const data = await res.json();
-      setDrivers(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setDriversError(err.message);
-      setDrivers([]);
-    } finally {
-      setDriversLoading(false);
-    }
-  }, [token, canAccess, headers]);
 
   useEffect(() => {
     if (activeTab === "drivers") {

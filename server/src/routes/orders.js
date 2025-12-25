@@ -79,17 +79,22 @@ async function sendCustomerConfirmation(order, cart, customerInfo, user, subtota
     return { success: false, error: "Email transporter not initialized" };
   }
   
-  // Check if customer email exists
-  if (!customerInfo?.email) {
+  // Use user email as primary source (the email they logged in with)
+  // Fall back to customerInfo.email if user.email is not available
+  const recipientEmail = user?.email || customerInfo?.email;
+  
+  if (!recipientEmail) {
     console.error("❌ Customer email missing. Cannot send confirmation email.", { 
       orderId: order._id, 
       orderRef: order.ref,
-      customerInfo 
+      customerInfo,
+      userEmail: user?.email
     });
     return { success: false, error: "Customer email missing" };
   }
   
-  console.log(`📧 Attempting to send confirmation email to ${customerInfo.email} for order ${order.ref}`);
+  console.log(`📧 Attempting to send confirmation email to ${recipientEmail} for order ${order.ref}`);
+  console.log(`📧 Email source: ${user?.email ? 'user.email (logged-in email)' : 'customerInfo.email'}`);
   
   const desiredTime = customerInfo.desiredTime || "So schnell wie möglich";
   const commentBlock = customerInfo?.notes
@@ -250,13 +255,13 @@ async function sendCustomerConfirmation(order, cart, customerInfo, user, subtota
     from: `"BellaBiladi 🍕" <${
       process.env.EMAIL_USER || "no-reply@bellabiladi.de"
     }>`,
-    to: customerInfo.email,
+    to: recipientEmail, // Use the logged-in user's email
     subject: "🍕 Ihre BellaBiladi Bestellbestätigung",
     html,
   };
 
   try {
-    console.log(`📧 Sending email to ${customerInfo.email}...`);
+    console.log(`📧 Sending email to ${recipientEmail}...`);
     console.log(`📧 Email subject: ${mailOptions.subject}`);
     console.log(`📧 Email from: ${mailOptions.from}`);
     
@@ -265,22 +270,25 @@ async function sendCustomerConfirmation(order, cart, customerInfo, user, subtota
     if (process.env.NODE_ENV !== "production") {
       const previewUrl = nodemailer.getTestMessageUrl(info);
       console.log("📨 Preview email at:", previewUrl);
-      console.log(`✅ Confirmation email sent to ${customerInfo.email} (test mode - check Ethereal)`);
+      console.log(`✅ Confirmation email sent to ${recipientEmail} (test mode - check Ethereal)`);
+      console.log(`📧 If you don't see the email, check: https://ethereal.email/login`);
     } else {
-      console.log(`✅ Confirmation email sent successfully to ${customerInfo.email}`);
+      console.log(`✅ Confirmation email sent successfully to ${recipientEmail}`);
       console.log(`📧 Message ID: ${info.messageId}`);
     }
-    return { success: true, messageId: info.messageId };
+    return { success: true, messageId: info.messageId, emailSentTo: recipientEmail };
   } catch (err) {
     console.error("❌ Customer email send failed:", err.message);
     console.error("❌ Full error details:", err);
     console.error("❌ Email config check:", {
       hasTransporter: !!transporter,
-      emailTo: customerInfo.email,
+      emailTo: recipientEmail,
       emailFrom: mailOptions.from,
       isProduction: process.env.NODE_ENV === "production",
       hasEmailUser: !!process.env.EMAIL_USER,
-      hasEmailPass: !!process.env.EMAIL_PASS
+      hasEmailPass: !!process.env.EMAIL_PASS,
+      userEmail: user?.email,
+      customerInfoEmail: customerInfo?.email
     });
     return { success: false, error: err.message };
   }
@@ -504,14 +512,18 @@ r.post("/", async (req, res) => {
     const total = Math.round(subtotal); // Add delivery fee if needed later
     const ref = `BB-${new Date().getFullYear()}-${nano()}`;
 
+    // Always use the logged-in user's email for order confirmation
     const customerInfo = {
       name: (customer?.name || user.name || "").toString().trim(),
       phone: (customer?.phone || "").toString().trim(),
       address: (customer?.address || "").toString().trim(),
-      email: user.email,
+      email: user.email || customer?.email || "", // Prioritize user.email (the email they logged in with)
       desiredTime: customer?.desiredTime || "So schnell wie möglich",
       notes: notes || customer?.notes || "",
     };
+    
+    // Log email being used for order
+    console.log(`📧 Order ${ref} - Customer email set to: ${customerInfo.email} (from user account)`);
 
     // Save order to MongoDB with timeout
     const orderStartTime = Date.now();
@@ -674,9 +686,15 @@ r.post("/:id/confirm", requireAdmin, async (req, res) => {
     console.log(`📧 Order confirmation requested for order ${order.ref}`);
     console.log(`📧 Order customer email: ${order.customer?.email || "MISSING"}`);
     console.log(`📧 Order customer name: ${order.customer?.name || "MISSING"}`);
-    console.log(`📧 User email: ${user?.email || "MISSING"}`);
+    console.log(`📧 User email (will be used for confirmation): ${user?.email || "MISSING"}`);
     console.log(`📧 Transporter available: ${!!transporter}`);
-    console.log(`📧 Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`📧 Environment: ${process.env.NODE_ENV || "production"}`);
+    
+    // Ensure customerInfo.email is set to user.email (the logged-in email)
+    if (order.customer && user?.email) {
+      order.customer.email = user.email;
+      console.log(`📧 Updated order.customer.email to user.email: ${user.email}`);
+    }
     
     // Send response immediately (don't wait for email)
     res.json({

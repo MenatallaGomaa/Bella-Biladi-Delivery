@@ -194,53 +194,15 @@ export default function CheckoutPayment({ onNavigate }) {
 
   // Validate cart items against current database
   // Match by name instead of ID since IDs change when database is re-seeded
-  useEffect(() => {
-    async function validateCartItems() {
-      if (cart.length === 0) {
-        setCartValidationError("");
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API_BASE}/api/items`);
-        if (!res.ok) {
-          // If API fails, don't show error - items might still be valid
-          setCartValidationError("");
-          return;
-        }
-        
-        const allItems = await res.json();
-        // Create a set of valid item names (more stable than IDs)
-        const validItemNames = new Set(allItems.map(item => item.name));
-        
-        const invalidItems = cart.filter(item => {
-          // If item has no name, consider it invalid
-          if (!item.name) {
-            return true;
-          }
-          // Check if item name exists in database
-          return !validItemNames.has(item.name);
-        });
-
-        if (invalidItems.length > 0) {
-          setCartValidationError(
-            `${invalidItems.length} Artikel im Warenkorb sind nicht mehr verfügbar. Bitte entferne sie oder lade die Seite neu.`
-          );
-        } else {
-          setCartValidationError("");
-        }
-      } catch (err) {
-        console.warn("Could not validate cart items:", err);
-        // Don't show error if validation fails - assume items are valid
-        setCartValidationError("");
-      }
-    }
-
-    // Only validate if cart has items
-    if (cart.length > 0) {
-      validateCartItems();
-    }
-  }, [cart]);
+  // Cart validation disabled - restaurant always has everything available
+  // useEffect(() => {
+  //   async function validateCartItems() {
+  //     // Validation logic removed - items are always available
+  //   }
+  //   if (cart.length > 0) {
+  //     validateCartItems();
+  //   }
+  // }, [cart]);
 
   useEffect(() => {
     document.body.style.overflow = editing || showItems ? "hidden" : "auto";
@@ -551,36 +513,8 @@ export default function CheckoutPayment({ onNavigate }) {
         }
       });
       
-      // Validate items by name and update cart items with current IDs
-      const invalidItems = grouped.filter(item => {
-        if (!item.name) return true;
-        return !nameToIdMap.has(item.name);
-      });
-
-      if (invalidItems.length > 0) {
-        setSubmitError(
-          `Einige Artikel im Warenkorb sind nicht mehr verfügbar. Die nicht verfügbaren Artikel wurden entfernt.`
-        );
-        // Clear invalid items from cart (match by name)
-        const validItemNames = new Set(allItems.map(item => item.name));
-        const validCartItems = cart.filter(item => {
-          return item.name && validItemNames.has(item.name);
-        });
-        if (validCartItems.length === 0) {
-          clearCart();
-        } else {
-          // Update cart items with current IDs from database
-          const updatedCartItems = validCartItems.map(cartItem => {
-            const currentId = nameToIdMap.get(cartItem.name);
-            if (currentId) {
-              return { ...cartItem, _id: currentId, id: currentId };
-            }
-            return cartItem;
-          });
-          setCart(updatedCartItems);
-        }
-        return;
-      }
+      // Validation disabled - restaurant always has everything available
+      // Just update cart items with current IDs from database
       
       // Update cart items with current IDs if they don't match
       const updatedCart = cart.map(cartItem => {
@@ -668,42 +602,8 @@ export default function CheckoutPayment({ onNavigate }) {
           onNavigate("CheckoutLogin");
           return;
         }
-        // If server says items not found, clean up the cart
-        if (data.error && data.error.includes("Some items not found")) {
-          // Fetch current items and filter out invalid ones by name
-          try {
-            const itemsRes = await fetch(`${API_BASE}/api/items`);
-            if (itemsRes.ok) {
-              const allItems = await itemsRes.json();
-              const validItemNames = new Set(allItems.map(item => item.name));
-              const validCartItems = cart.filter(item => {
-                return item.name && validItemNames.has(item.name);
-              });
-              if (validCartItems.length === 0) {
-                clearCart();
-              } else {
-                // Update cart items with current IDs
-                const nameToIdMap = new Map();
-                allItems.forEach(item => {
-                  if (item.name) {
-                    nameToIdMap.set(item.name, String(item._id));
-                  }
-                });
-                const updatedCartItems = validCartItems.map(cartItem => {
-                  const currentId = nameToIdMap.get(cartItem.name);
-                  if (currentId) {
-                    return { ...cartItem, _id: currentId, id: currentId };
-                  }
-                  return cartItem;
-                });
-                setCart(updatedCartItems);
-              }
-            }
-          } catch (cleanupErr) {
-            console.error("Error cleaning up cart:", cleanupErr);
-          }
-          throw new Error("Einige Artikel im Warenkorb sind nicht mehr verfügbar. Die nicht verfügbaren Artikel wurden entfernt. Bitte versuche es erneut.");
-        }
+        // Validation disabled - restaurant always has everything available
+        // If server returns an error, just throw it as-is
         throw new Error(data.error || "Bestellung fehlgeschlagen");
       }
 
@@ -936,39 +836,6 @@ export default function CheckoutPayment({ onNavigate }) {
             </div>
           </div>
 
-          {cartValidationError && !confirmation && (
-            <div className="mt-4 bg-yellow-100 border border-yellow-300 text-yellow-800 text-xs sm:text-sm px-3 py-2 rounded">
-              <div className="flex items-start gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-                <div>
-                  <strong>Hinweis:</strong> {cartValidationError}
-                  <button
-                    onClick={() => {
-                      clearCart();
-                      setCartValidationError("");
-                      onNavigate("Home");
-                    }}
-                    className="ml-2 text-yellow-700 underline font-semibold"
-                  >
-                    Warenkorb leeren
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {submitError && !confirmation && (
             <div className="mt-4 bg-red-100 border border-red-300 text-red-700 text-xs sm:text-sm px-3 py-2 rounded">

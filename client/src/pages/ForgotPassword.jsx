@@ -136,8 +136,10 @@ export default function ForgotPassword({ onNavigate }) {
                   </a>
                 </>
               ) : (
-                <p className="mb-2 font-semibold">✅ Reset-Link wurde generiert!</p>
-                <p>Sie können Ihr Passwort direkt hier zurücksetzen:</p>
+                <>
+                  <p className="mb-2 font-semibold">✅ Reset-Link wurde generiert!</p>
+                  <p>Sie können Ihr Passwort direkt hier zurücksetzen:</p>
+                </>
               )}
             </div>
             

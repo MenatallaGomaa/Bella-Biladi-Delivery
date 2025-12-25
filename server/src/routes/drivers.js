@@ -8,10 +8,12 @@ import { requireAdmin } from "../middleware/auth.js";
 const r = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 
-// ✅ Get all drivers (admin only)
+// ✅ Get all drivers (admin only) - sorted alphabetically A-Z
 r.get("/", requireAdmin, async (req, res) => {
   try {
-    const drivers = await Driver.find({ isActive: true }).populate("currentOrder");
+    const drivers = await Driver.find({ isActive: true })
+      .populate("currentOrder")
+      .sort({ name: 1 }); // Sort alphabetically by name (A-Z)
     res.json(drivers);
   } catch (err) {
     console.error("Error fetching drivers:", err);
@@ -207,10 +209,16 @@ r.post("/", requireAdmin, async (req, res) => {
       return res.status(400).json({ error: "Name and phone are required" });
     }
 
+    // Check if driver with same name already exists
+    const existingDriver = await Driver.findOne({ name: name.trim(), isActive: true });
+    if (existingDriver) {
+      return res.status(400).json({ error: "Ein Fahrer mit diesem Namen existiert bereits" });
+    }
+
     const driver = new Driver({
-      name,
-      phone,
-      email,
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email?.trim() || "",
       isActive: true,
     });
 
@@ -219,6 +227,70 @@ r.post("/", requireAdmin, async (req, res) => {
   } catch (err) {
     console.error("Error creating driver:", err);
     res.status(500).json({ error: "Failed to create driver" });
+  }
+});
+
+// ✅ Update a driver (admin only)
+r.patch("/:id", requireAdmin, async (req, res) => {
+  try {
+    const { name, phone, email } = req.body;
+    const driver = await Driver.findById(req.params.id);
+
+    if (!driver) {
+      return res.status(404).json({ error: "Driver not found" });
+    }
+
+    // Check if name is being changed and if it conflicts with another driver
+    if (name && name.trim() !== driver.name) {
+      const existingDriver = await Driver.findOne({ 
+        name: name.trim(), 
+        isActive: true,
+        _id: { $ne: driver._id }
+      });
+      if (existingDriver) {
+        return res.status(400).json({ error: "Ein Fahrer mit diesem Namen existiert bereits" });
+      }
+      driver.name = name.trim();
+    }
+
+    if (phone) driver.phone = phone.trim();
+    if (email !== undefined) driver.email = email?.trim() || "";
+
+    await driver.save();
+    res.json(driver);
+  } catch (err) {
+    console.error("Error updating driver:", err);
+    res.status(500).json({ error: "Failed to update driver" });
+  }
+});
+
+// ✅ Delete/deactivate a driver (admin only)
+r.delete("/:id", requireAdmin, async (req, res) => {
+  try {
+    const driver = await Driver.findById(req.params.id);
+
+    if (!driver) {
+      return res.status(404).json({ error: "Driver not found" });
+    }
+
+    // Soft delete - set isActive to false instead of actually deleting
+    driver.isActive = false;
+    
+    // Unassign any current order
+    if (driver.currentOrder) {
+      const order = await Order.findById(driver.currentOrder);
+      if (order) {
+        order.driverId = null;
+        await order.save();
+      }
+      driver.currentOrder = null;
+    }
+
+    await driver.save();
+    res.json({ success: true, message: "Driver deactivated successfully" });
+  } catch (err) {
+    console.error("Error deleting driver:", err);
+    res.status(500).json({ error: "Failed to delete driver" });
   }
 });
 

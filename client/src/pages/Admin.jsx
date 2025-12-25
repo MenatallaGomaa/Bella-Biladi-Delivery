@@ -71,6 +71,13 @@ export default function Admin({ onNavigate }) {
   const [drivers, setDrivers] = useState([]);
   const [driversLoading, setDriversLoading] = useState(false);
   const [driversError, setDriversError] = useState("");
+  const [driverForm, setDriverForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+  });
+  const [editingDriverId, setEditingDriverId] = useState(null);
+  const [driverFeedback, setDriverFeedback] = useState("");
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -78,6 +85,12 @@ export default function Admin({ onNavigate }) {
     const timeout = setTimeout(() => setItemFeedback(""), 4000);
     return () => clearTimeout(timeout);
   }, [itemFeedback]);
+
+  useEffect(() => {
+    if (!driverFeedback) return;
+    const timeout = setTimeout(() => setDriverFeedback(""), 4000);
+    return () => clearTimeout(timeout);
+  }, [driverFeedback]);
 
   const headers = useMemo(() => {
     const base = { "Content-Type": "application/json" };
@@ -145,7 +158,11 @@ export default function Admin({ onNavigate }) {
       const res = await fetch(`${API_BASE}/api/drivers`, { headers });
       if (!res.ok) throw new Error("Fahrer konnten nicht geladen werden");
       const data = await res.json();
-      setDrivers(Array.isArray(data) ? data : []);
+      // Sort drivers alphabetically by name (A-Z) - backend already sorts, but ensure frontend does too
+      const sortedDrivers = Array.isArray(data) 
+        ? [...data].sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" }))
+        : [];
+      setDrivers(sortedDrivers);
     } catch (err) {
       setDriversError(err.message);
       setDrivers([]);
@@ -965,7 +982,94 @@ export default function Admin({ onNavigate }) {
 
         {activeTab === "drivers" && (
           <div className="space-y-5">
-            <h2 className="text-xl font-semibold">Fahrerübersicht</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Fahrerübersicht</h2>
+              <p className="text-sm text-gray-600">Sortiert alphabetisch (A-Z)</p>
+            </div>
+            
+            {/* Driver Management Form */}
+            <div className="border border-amber-200 rounded-xl p-5 bg-amber-50/60">
+              <h2 className="text-lg font-semibold mb-4">
+                {editingDriverId ? "Fahrer bearbeiten" : "Neuen Fahrer anlegen"}
+              </h2>
+              {driversError && (
+                <div className="mb-3 bg-red-100 border border-red-300 text-red-700 text-sm px-3 py-2 rounded">
+                  {driversError}
+                </div>
+              )}
+              {driverFeedback && (
+                <div className="mb-3 bg-green-100 border border-green-300 text-green-700 text-sm px-3 py-2 rounded">
+                  {driverFeedback}
+                </div>
+              )}
+              <form className="space-y-3" onSubmit={handleDriverSubmit}>
+                <div>
+                  <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={driverForm.name}
+                    onChange={(e) =>
+                      setDriverForm({ ...driverForm, name: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="z.B. Max Mustermann"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">
+                    Telefon *
+                  </label>
+                  <input
+                    type="tel"
+                    value={driverForm.phone}
+                    onChange={(e) =>
+                      setDriverForm({ ...driverForm, phone: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="z.B. 01521 3274837"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wide text-gray-600 mb-1">
+                    E-Mail (optional)
+                  </label>
+                  <input
+                    type="email"
+                    value={driverForm.email}
+                    onChange={(e) =>
+                      setDriverForm({ ...driverForm, email: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="fahrer@example.com"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    {editingDriverId ? "Aktualisieren" : "Fahrer hinzufügen"}
+                  </button>
+                  {editingDriverId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingDriverId(null);
+                        setDriverForm({ name: "", phone: "", email: "" });
+                        setDriversError("");
+                      }}
+                      className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Abbrechen
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
             
             {driversError && (
               <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg">
@@ -991,20 +1095,40 @@ export default function Admin({ onNavigate }) {
                   >
                     <div className="flex flex-col lg:flex-row gap-4">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-2">{driver.name}</h3>
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-semibold text-lg">{driver.name}</h3>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditDriver(driver)}
+                              className="bg-blue-100 hover:bg-blue-200 text-blue-600 text-xs font-medium rounded px-2 py-1"
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDriver(driver._id)}
+                              className="bg-red-100 hover:bg-red-200 text-red-600 text-xs font-medium rounded px-2 py-1"
+                            >
+                              Löschen
+                            </button>
+                          </div>
+                        </div>
                         <div className="text-sm text-gray-700 space-y-1">
                           <p><strong>Telefon:</strong> {driver.phone}</p>
                           {driver.email && (
                             <p><strong>E-Mail:</strong> {driver.email}</p>
                           )}
-                          {driver.currentOrder && (
-                            <p className="text-amber-600">
-                              <strong>Aktuelle Bestellung:</strong> {driver.currentOrder.ref || driver.currentOrder._id}
+                          {driver.currentOrder ? (
+                            <p className="text-amber-600 font-semibold">
+                              <strong>🚴 Aktuelle Bestellung:</strong> {driver.currentOrder.ref || driver.currentOrder._id}
+                            </p>
+                          ) : (
+                            <p className="text-gray-400 text-xs">
+                              Keine aktive Bestellung
                             </p>
                           )}
                           {driver.currentLocation?.latitude && (
                             <p className="text-xs text-gray-500">
-                              <strong>Letzte Aktualisierung:</strong>{" "}
+                              <strong>📍 Letzte Aktualisierung:</strong>{" "}
                               {new Date(driver.currentLocation.lastUpdated).toLocaleString("de-DE")}
                             </p>
                           )}

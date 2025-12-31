@@ -1293,11 +1293,13 @@ export default function CheckoutPayment({ onNavigate }) {
                       value={form.time.date || ""}
                       onChange={(e) => {
                         const selectedDateValue = e.target.value;
-                        const selectedDate = new Date(selectedDateValue);
                         const nextDays = getNextDays(10);
                         const selectedDay = nextDays.find(d => d.value === selectedDateValue);
                         
                         if (!selectedDay) return;
+                        
+                        // Use the Date object from selectedDay to avoid timezone issues
+                        const selectedDate = selectedDay.date;
                         
                         // Calculate available time slots for the selected date
                         const availableSlots = getAvailableTimeSlots(selectedDate);
@@ -1324,7 +1326,7 @@ export default function CheckoutPayment({ onNavigate }) {
                           }
                         } else {
                           const firstAvailableSlot = availableSlots[0] || "12:00";
-                          const dayLabel = formatDateLabel(selectedDate, selectedDay.isToday, selectedDay.isTomorrow);
+                          const dayLabel = formatDateLabel(selectedDay.date, selectedDay.isToday, selectedDay.isTomorrow);
                           setForm((prev) => ({
                             ...prev,
                             time: {
@@ -1367,13 +1369,13 @@ export default function CheckoutPayment({ onNavigate }) {
                         const selectedHour = e.target.value;
                         if (!form.time.date) return;
                         
-                        const selectedDate = new Date(form.time.date);
                         const nextDays = getNextDays(10);
                         const selectedDay = nextDays.find(d => d.value === form.time.date);
                         
                         if (!selectedDay) return;
                         
-                        const dayLabel = formatDateLabel(selectedDate, selectedDay.isToday, selectedDay.isTomorrow);
+                        // Use the Date object from selectedDay to avoid timezone issues
+                        const dayLabel = formatDateLabel(selectedDay.date, selectedDay.isToday, selectedDay.isTomorrow);
                         
                         setForm((prev) => ({
                           ...prev,
@@ -1390,7 +1392,13 @@ export default function CheckoutPayment({ onNavigate }) {
                           return <option value="">Bitte wähle zuerst ein Datum</option>;
                         }
                         
-                        const selectedDate = new Date(form.time.date);
+                        // Use Date object from getNextDays to avoid timezone issues
+                        const nextDays = getNextDays(10);
+                        const selectedDay = nextDays.find(d => d.value === form.time.date);
+                        if (!selectedDay) {
+                          return <option value="">Ungültiges Datum</option>;
+                        }
+                        const selectedDate = selectedDay.date;
                         const availableSlots = getAvailableTimeSlots(selectedDate);
                         
                         if (availableSlots.length === 0) {
@@ -1409,7 +1417,10 @@ export default function CheckoutPayment({ onNavigate }) {
                       })()}
                     </select>
                     {form.time.date && (() => {
-                      const selectedDate = new Date(form.time.date);
+                      // Use Date object from getNextDays to avoid timezone issues
+                      const nextDays = getNextDays(10);
+                      const selectedDay = nextDays.find(d => d.value === form.time.date);
+                      const selectedDate = selectedDay ? selectedDay.date : new Date(form.time.date);
                       const availableSlots = getAvailableTimeSlots(selectedDate);
                       if (availableSlots.length === 0) {
                         return (
@@ -1427,11 +1438,11 @@ export default function CheckoutPayment({ onNavigate }) {
                   onClick={() => {
                     let label = "So schnell wie möglich";
                     if (form.time.type === "later" && form.time.date && form.time.hour) {
-                      const selectedDate = new Date(form.time.date);
                       const nextDays = getNextDays(10);
                       const selectedDay = nextDays.find(d => d.value === form.time.date);
                       if (selectedDay) {
-                        const dayLabel = formatDateLabel(selectedDate, selectedDay.isToday, selectedDay.isTomorrow);
+                        // Use Date object from selectedDay to avoid timezone issues
+                        const dayLabel = formatDateLabel(selectedDay.date, selectedDay.isToday, selectedDay.isTomorrow);
                         label = `${dayLabel} ${form.time.hour} Uhr`;
                       }
                     }

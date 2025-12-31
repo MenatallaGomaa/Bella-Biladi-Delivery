@@ -262,14 +262,21 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
 
   if (!order) return null;
 
-  // Order status stages
-  const statusStages = [
-    { key: "new", label: "Neu", icon: "📋" },
-    { key: "accepted", label: "Akzeptiert", icon: "✅" },
-    { key: "preparing", label: "In Bearbeitung", icon: "👨‍🍳" },
-    { key: "on_the_way", label: "Unterwegs", icon: "🚴" },
-    { key: "delivered", label: "Geliefert", icon: "🎉" },
-  ];
+  // Order status stages - different for pickup vs delivery
+  const statusStages = order.channel === "pickup" 
+    ? [
+        { key: "new", label: "Neu", icon: "📋" },
+        { key: "accepted", label: "Akzeptiert", icon: "✅" },
+        { key: "preparing", label: "In Bearbeitung", icon: "👨‍🍳" },
+        { key: "delivered", label: "Abgeholt", icon: "🎉" },
+      ]
+    : [
+        { key: "new", label: "Neu", icon: "📋" },
+        { key: "accepted", label: "Akzeptiert", icon: "✅" },
+        { key: "preparing", label: "In Bearbeitung", icon: "👨‍🍳" },
+        { key: "on_the_way", label: "Unterwegs", icon: "🚴" },
+        { key: "delivered", label: "Geliefert", icon: "🎉" },
+      ];
 
   const getCurrentStageIndex = () => {
     return statusStages.findIndex((s) => s.key === order.status);
@@ -298,19 +305,21 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
               <p className="text-sm text-gray-600 font-medium">
                 {order.status === "new" && "Bestellung erhalten"}
                 {order.status === "accepted" && "Bestellung bestätigt"}
-                {order.status === "preparing" && "Bestellung wird vorbereitet"}
+                {order.status === "preparing" && order.channel === "pickup" && "Bestellung wird vorbereitet"}
+                {order.status === "preparing" && order.channel !== "pickup" && "Bestellung wird vorbereitet"}
                 {order.status === "on_the_way" && "Unterwegs zu Ihnen"}
-                {order.status === "delivered" && "Geliefert"}
+                {order.status === "delivered" && order.channel === "pickup" && "Abgeholt"}
+                {order.status === "delivered" && order.channel !== "pickup" && "Geliefert"}
                 {order.status === "canceled" && "Storniert"}
               </p>
-              {order.status === "on_the_way" && (
+              {order.status === "on_the_way" && order.channel !== "pickup" && (
                 <p className="text-xs text-gray-500 mt-1">Ankunft: in Kürze</p>
               )}
             </div>
             
             {/* Status Stages */}
             <div className="flex items-start justify-between mb-4 gap-1">
-              {statusStages.slice(0, 4).map((stage, index) => {
+              {statusStages.map((stage, index) => {
                 const isCompleted = index <= currentStageIndex;
                 const isCurrent = index === currentStageIndex;
                 
@@ -338,22 +347,24 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
             </div>
           </div>
 
-          {/* Map - Always visible */}
-          <div className="rounded-xl overflow-hidden bg-gray-100" style={{ height: "300px", minHeight: "300px" }}>
-            {loading ? (
-              <div className="h-full bg-gray-100 flex items-center justify-center">
-                <p className="text-gray-500">Lade Karte...</p>
-              </div>
-            ) : (
-              <DriverMap
-                driverLocation={driverLocation}
-                customerAddress={order.customer?.address}
-                orderId={orderId}
-                orderStatus={order.status}
-                height="300px"
-              />
-            )}
-          </div>
+          {/* Map - Only show for delivery orders, not pickup */}
+          {order.channel !== "pickup" && (
+            <div className="rounded-xl overflow-hidden bg-gray-100" style={{ height: "300px", minHeight: "300px" }}>
+              {loading ? (
+                <div className="h-full bg-gray-100 flex items-center justify-center">
+                  <p className="text-gray-500">Lade Karte...</p>
+                </div>
+              ) : (
+                <DriverMap
+                  driverLocation={driverLocation}
+                  customerAddress={order.customer?.address}
+                  orderId={orderId}
+                  orderStatus={order.status}
+                  height="300px"
+                />
+              )}
+            </div>
+          )}
 
           {/* Order Info Card */}
           <div className="bg-gray-50 rounded-xl p-4 space-y-3">

@@ -818,7 +818,7 @@ export default function CheckoutPayment({ onNavigate }) {
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="radio" name="payment" />
-              <span>Mit Karte bei der Lieferung</span>
+              <span>{deliveryMode === "Abholung" ? "Mit Karte bei der Abholung" : "Mit Karte bei der Lieferung"}</span>
             </label>
           </div>
         </div>

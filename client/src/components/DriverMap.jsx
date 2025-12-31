@@ -111,35 +111,75 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
       animationRef.current = null;
     }
 
-    const customerLat = customerCoords?.latitude || restaurantCoords.latitude + 0.01;
-    const customerLng = customerCoords?.longitude || restaurantCoords.longitude + 0.01;
+    // Always use geocoded customer coordinates if available
+    const customerLat = customerCoords?.latitude;
+    const customerLng = customerCoords?.longitude;
+    
+    // If we don't have customer coordinates yet, wait for geocoding
+    if (!customerLat || !customerLng) {
+      return;
+    }
+
     const startLat = restaurantCoords.latitude;
     const startLng = restaurantCoords.longitude;
 
-    // If order is delivered, show driver at customer address
+    // If order is delivered, ALWAYS show driver at customer address
     if (orderStatus === "delivered") {
       if (driverMarkerRef.current) {
         driverMarkerRef.current.setLatLng([customerLat, customerLng]);
         driverMarkerRef.current.setPopupContent(
           `<b>Fahrer</b><br>Geliefert<br>Angekommen bei ${customerAddress || "Kunde"}`
         );
+        // Ensure map shows customer location
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.setView([customerLat, customerLng], 14);
+        }
       }
       return;
     }
 
     // If order is on_the_way, animate driver moving from restaurant to customer
     if (orderStatus === "on_the_way") {
-      // Use actual driver location if available, otherwise animate from restaurant
+      // Use actual driver location if available and it's different from restaurant
       const driverPos = getDriverLocation(driverLocation, restaurantCoords);
 
-      // If we have actual driver location updates (not at restaurant), use those instead of animation
-      // Real-time location updates will be handled by the main useEffect
+      // If we have real-time driver location updates (not at restaurant), use those
       if (!driverPos.isAtRestaurant && driverLocation && driverLocation.latitude && driverLocation.longitude) {
-        // Don't animate - use real-time updates
-        console.log("🚴 Using real-time driver location, skipping animation");
+        // Use real-time location - update marker position
+        const realLat = driverLocation.latitude;
+        const realLng = driverLocation.longitude;
+        
+        // Calculate progress towards customer (0 = restaurant, 1 = customer)
+        const distToRestaurant = Math.sqrt(
+          Math.pow(realLat - startLat, 2) + Math.pow(realLng - startLng, 2)
+        );
+        const distToCustomer = Math.sqrt(
+          Math.pow(customerLat - startLat, 2) + Math.pow(customerLng - startLng, 2)
+        );
+        const progress = Math.min(1, distToRestaurant / distToCustomer);
+        
+        if (driverMarkerRef.current) {
+          driverMarkerRef.current.setLatLng([realLat, realLng]);
+          driverMarkerRef.current.setPopupContent(
+            `<b>Fahrer</b><br>Unterwegs<br>${driverPos.driverName || "Unterwegs zu Ihnen"}`
+          );
+        }
+        
+        // Update route line to show current position
+        if (routeLineRef.current) {
+          const routePoints = [
+            [startLat, startLng],
+            [realLat, realLng],
+            [customerLat, customerLng],
+          ];
+          routeLineRef.current.setLatLngs(routePoints);
+        }
+        
+        console.log("🚴 Using real-time driver location:", { realLat, realLng, progress });
         return;
       }
 
+      // No real-time location - animate from restaurant to customer
       console.log("🚴 Starting driver animation from restaurant to customer");
       
       // Start driver at restaurant position
@@ -149,13 +189,17 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
 
       // Animate driver moving from restaurant to customer
       const totalSteps = 100; // More steps for smoother animation
-      const duration = 15000; // 15 seconds total for more realistic movement
+      const duration = 20000; // 20 seconds for smoother movement
       const stepInterval = duration / totalSteps;
       let step = 0;
 
       const animate = () => {
-        if (!driverMarkerRef.current) {
-          // Marker was removed, stop animation
+        if (!driverMarkerRef.current || orderStatus !== "on_the_way") {
+          // Marker was removed or status changed, stop animation
+          if (animationRef.current) {
+            clearTimeout(animationRef.current);
+            animationRef.current = null;
+          }
           return;
         }
 
@@ -169,7 +213,7 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
           return;
         }
 
-        // Calculate intermediate position
+        // Calculate intermediate position moving towards customer
         const progress = step / totalSteps;
         // Use easing function for smooth animation
         const easedProgress = 1 - Math.pow(1 - progress, 3); // Ease-out cubic
@@ -181,6 +225,16 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
         driverMarkerRef.current.setPopupContent(
           `<b>Fahrer</b><br>Unterwegs<br>${Math.round(progress * 100)}% der Strecke`
         );
+
+        // Update route line to show progress
+        if (routeLineRef.current) {
+          const routePoints = [
+            [startLat, startLng],
+            [lat, lng],
+            [customerLat, customerLng],
+          ];
+          routeLineRef.current.setLatLngs(routePoints);
+        }
 
         step++;
         animationRef.current = setTimeout(animate, stepInterval);
@@ -275,18 +329,27 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
           routeLineRef.current = routeLine;
         }
 
-        // Add driver marker - ALWAYS starts at restaurant location (Probstheidaer Straße 21)
-        // This ensures the driver icon is always visible at the starting point
-        const driverMarker = L.marker([driverLat, driverLng], {
+        // Add driver marker - position depends on order status
+        // If delivered, start at customer location; otherwise at restaurant
+        let initialDriverLat = driverLat;
+        let initialDriverLng = driverLng;
+        let initialPopup = `<b>Fahrer</b><br>${driverPos.driverName || "Bereit am Restaurant"}<br>${
+          hasActualLocation ? "Unterwegs" : `Startpunkt: ${restaurantCoords.address}`
+        }`;
+        
+        // If order is delivered, start driver at customer location
+        if (orderStatus === "delivered" && customerCoords?.latitude && customerCoords?.longitude) {
+          initialDriverLat = customerCoords.latitude;
+          initialDriverLng = customerCoords.longitude;
+          initialPopup = `<b>Fahrer</b><br>Geliefert<br>Angekommen bei ${customerAddress || "Kunde"}`;
+        }
+        
+        const driverMarker = L.marker([initialDriverLat, initialDriverLng], {
           icon: createBikeIcon(),
           zIndexOffset: 1000, // Ensure driver marker is always on top
         })
           .addTo(map)
-          .bindPopup(
-          `<b>Fahrer</b><br>${driverPos.driverName || "Bereit am Restaurant"}<br>${
-            hasActualLocation ? "Unterwegs" : `Startpunkt: ${restaurantCoords.address}`
-          }`
-          );
+          .bindPopup(initialPopup);
         
         // Debug: Log driver position to verify it's at restaurant
         console.log("🚴 Driver marker position:", {
@@ -304,7 +367,7 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
         // Fit bounds to show restaurant, customer (if available), and driver
         const boundsPoints = [
           [restaurantCoords.latitude, restaurantCoords.longitude],
-          [driverLat, driverLng],
+          [initialDriverLat, initialDriverLng],
         ];
         
         if (customerCoords || customerAddress) {
@@ -312,7 +375,13 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
         }
         
         const bounds = L.latLngBounds(boundsPoints);
-        map.fitBounds(bounds, { padding: [50, 50] });
+        
+        // If delivered, focus on customer location
+        if (orderStatus === "delivered" && customerCoords?.latitude && customerCoords?.longitude) {
+          map.setView([customerCoords.latitude, customerCoords.longitude], 14);
+        } else {
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
         
         // Ensure map is properly sized after rendering
         setTimeout(() => {
@@ -326,32 +395,34 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
       }
     } else {
       // Update driver marker position if map already exists
-      // But don't update if we're animating (on_the_way) or if delivered (driver should be at customer)
+      // Status-specific handling is done in the animation useEffect
       if (driverMarkerRef.current) {
-        // If order is delivered, driver should be at customer location (handled by animation useEffect)
+        // If order is delivered, ALWAYS ensure driver is at customer location
         if (orderStatus === "delivered") {
-          const customerLat = customerCoords?.latitude || restaurantCoords.latitude + 0.01;
-          const customerLng = customerCoords?.longitude || restaurantCoords.longitude + 0.01;
-          driverMarkerRef.current.setLatLng([customerLat, customerLng]);
-          driverMarkerRef.current.setPopupContent(
-            `<b>Fahrer</b><br>Geliefert<br>Angekommen bei ${customerAddress || "Kunde"}`
-          );
-        }
-        // If order is on_the_way and we have real-time driver location, use it (don't interfere with animation)
-        else if (orderStatus === "on_the_way" && hasActualLocation && !driverPos.isAtRestaurant) {
-          // Only update if we're not currently animating
-          if (!animationRef.current) {
-            // Use real-time driver location updates
-            const newLatLng = [driverLat, driverLng];
-            driverMarkerRef.current.setLatLng(newLatLng);
+          const customerLat = customerCoords?.latitude;
+          const customerLng = customerCoords?.longitude;
+          
+          // Only update if we have customer coordinates
+          if (customerLat && customerLng) {
+            driverMarkerRef.current.setLatLng([customerLat, customerLng]);
             driverMarkerRef.current.setPopupContent(
-              `<b>Fahrer</b><br>${driverPos.driverName || "Unterwegs"}<br>Unterwegs zu Ihnen`
+              `<b>Fahrer</b><br>Geliefert<br>Angekommen bei ${customerAddress || "Kunde"}`
             );
+            
+            // Center map on customer location
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.setView([customerLat, customerLng], 14);
+            }
           }
-          // If animation is running, let it continue - real-time updates will take over when available
         }
-        // For other statuses (not on_the_way and not delivered), use normal logic
-        else if (orderStatus !== "on_the_way" && orderStatus !== "delivered") {
+        // If order is on_the_way, let the animation useEffect handle it
+        // Real-time updates will be handled there
+        else if (orderStatus === "on_the_way") {
+          // Animation useEffect handles this case
+          // Just ensure marker exists and is visible
+        }
+        // For other statuses (new, accepted, preparing), driver is at restaurant
+        else {
           const newLatLng = [driverLat, driverLng];
           driverMarkerRef.current.setLatLng(newLatLng);
           
@@ -388,17 +459,22 @@ export default function DriverMap({ driverLocation, customerAddress, orderId, or
         }
 
         // Fit bounds to show all markers
-        const boundsPoints = [
-          [restaurantCoords.latitude, restaurantCoords.longitude],
-          [driverLat, driverLng],
-        ];
-        
-        if (customerCoords || customerAddress) {
-          boundsPoints.push([customerLat, customerLng]);
+        // If delivered, focus on customer location
+        if (orderStatus === "delivered" && customerCoords?.latitude && customerCoords?.longitude) {
+          mapInstanceRef.current.setView([customerCoords.latitude, customerCoords.longitude], 14);
+        } else {
+          const boundsPoints = [
+            [restaurantCoords.latitude, restaurantCoords.longitude],
+            [driverLat, driverLng],
+          ];
+          
+          if (customerCoords || customerAddress) {
+            boundsPoints.push([customerLat, customerLng]);
+          }
+          
+          const bounds = L.latLngBounds(boundsPoints);
+          mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
         }
-        
-        const bounds = L.latLngBounds(boundsPoints);
-        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
       }
     }
 

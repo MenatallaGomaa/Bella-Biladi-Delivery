@@ -538,6 +538,7 @@ r.post("/", async (req, res) => {
       },
       customer: customerInfo,
       method: "cash_on_delivery",
+      channel: req.body.channel || "delivery", // Set channel (pickup or delivery)
     });
     const orderSaveTime = Date.now() - orderStartTime;
 

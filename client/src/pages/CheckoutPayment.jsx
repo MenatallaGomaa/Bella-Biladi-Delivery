@@ -208,6 +208,11 @@ export default function CheckoutPayment({ onNavigate }) {
     document.body.style.overflow = editing || showItems ? "hidden" : "auto";
   }, [editing, showItems]);
 
+  // Get delivery mode from localStorage
+  const [deliveryMode, setDeliveryMode] = useState(() => {
+    return localStorage.getItem("deliveryMode") || "Lieferung";
+  });
+
   useEffect(() => {
     if (!loading && !user) {
       localStorage.setItem("redirectAfterLogin", "CheckoutPayment");
@@ -227,6 +232,12 @@ export default function CheckoutPayment({ onNavigate }) {
   useEffect(() => {
     // Don't calculate delivery fee if order is already confirmed
     if (confirmation) {
+      return;
+    }
+
+    // For pickup orders, delivery fee is always 0
+    if (deliveryMode === "Abholung") {
+      setDeliveryFeeInfo({ feeCents: 0, eligible: true, distanceKm: 0 });
       return;
     }
 
@@ -293,7 +304,7 @@ export default function CheckoutPayment({ onNavigate }) {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [form.street, form.postalCity, subtotalCents, confirmation]);
+  }, [form.street, form.postalCity, subtotalCents, confirmation, deliveryMode]);
 
 
   useEffect(() => {
@@ -352,12 +363,15 @@ export default function CheckoutPayment({ onNavigate }) {
     if (!form.email.trim()) newErrors.email = "Bitte gib deine E-Mail ein.";
     if (!form.phone.trim())
       newErrors.phone = "Bitte gib deine Telefonnummer ein.";
-    if (!form.street.trim())
-      newErrors.street = "Bitte gib deine Straße und Hausnummer ein.";
-    if (!form.postalCity.trim())
-      newErrors.postalCity = "Bitte gib deine PLZ und Stadt ein.";
+    // Address is required only for delivery orders
+    if (deliveryMode !== "Abholung") {
+      if (!form.street.trim())
+        newErrors.street = "Bitte gib deine Straße und Hausnummer ein.";
+      if (!form.postalCity.trim())
+        newErrors.postalCity = "Bitte gib deine PLZ und Stadt ein.";
+    }
     if (!form.time || !form.time.label)
-      newErrors.time = "Bitte wähle eine Lieferzeit.";
+      newErrors.time = deliveryMode === "Abholung" ? "Bitte wähle eine Abholzeit." : "Bitte wähle eine Lieferzeit.";
 
     setErrors(newErrors);
 
@@ -593,6 +607,7 @@ export default function CheckoutPayment({ onNavigate }) {
       distanceKm: deliveryFeeInfo.distanceKm,
       subtotal: subtotalCents,
       total: Math.round(total * 100), // Convert to cents
+      channel: deliveryMode === "Abholung" ? "pickup" : "delivery", // Set channel based on delivery mode
     };
 
     const headers = {
@@ -684,7 +699,7 @@ export default function CheckoutPayment({ onNavigate }) {
                   {errors.phone && <li>Telefonnummer</li>}
                   {errors.street && <li>Straße und Hausnummer</li>}
                   {errors.postalCity && <li>PLZ und Stadt</li>}
-                  {errors.time && <li>Lieferzeit</li>}
+                  {errors.time && <li>{deliveryMode === "Abholung" ? "Abholzeit" : "Lieferzeit"}</li>}
                 </ul>
               </div>
             </div>
@@ -743,12 +758,12 @@ export default function CheckoutPayment({ onNavigate }) {
               <div className="flex items-center gap-3">
                 <img
                   src={clockIcon}
-                  alt="Lieferzeit"
+                  alt={deliveryMode === "Abholung" ? "Abholzeit" : "Lieferzeit"}
                   className="w-5 h-5 opacity-80"
                 />
                 <div>
                   <div className="font-medium">
-                    Lieferzeit <span className="text-red-500">*</span>
+                    {deliveryMode === "Abholung" ? "Abholzeit" : "Lieferzeit"} <span className="text-red-500">*</span>
                   </div>
                   <div className="text-gray-500">{form.time.label}</div>
                 </div>
@@ -1189,7 +1204,7 @@ export default function CheckoutPayment({ onNavigate }) {
 
             {editing === "time" && (
               <>
-                <h3 className="text-lg font-semibold mb-4">Lieferzeit</h3>
+                <h3 className="text-lg font-semibold mb-4">{deliveryMode === "Abholung" ? "Abholzeit" : "Lieferzeit"}</h3>
                 <label className="flex items-center gap-2 mb-3">
                   <input
                     type="radio"

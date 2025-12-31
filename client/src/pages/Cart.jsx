@@ -44,6 +44,9 @@ export default function Cart({ onNavigate }) {
 
   // Handle checkout button click
   const handleCheckout = () => {
+    // Store delivery mode for checkout
+    localStorage.setItem("deliveryMode", deliveryMode);
+    
     if (user) {
       // already logged in → go directly to payment
       onNavigate("CheckoutPayment");

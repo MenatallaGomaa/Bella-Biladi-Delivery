@@ -714,7 +714,7 @@ export default function Admin({ onNavigate }) {
                         )}
                         {order.customer?.desiredTime && (
                           <div>
-                            <strong>Lieferzeit:</strong>{" "}
+                            <strong>{order.channel === "pickup" ? "Abholzeit" : "Lieferzeit"}:</strong>{" "}
                             {order.customer.desiredTime}
                           </div>
                         )}
@@ -723,7 +723,8 @@ export default function Admin({ onNavigate }) {
                             <strong>Hinweis:</strong> {order.customer.notes}
                           </div>
                         )}
-                        {order.driverId && (
+                        {/* Only show driver for delivery orders, not pickup */}
+                        {order.driverId && order.channel !== "pickup" && (
                           <div className="mt-2">
                             <span className="text-sm font-medium">Fahrer: </span>
                             <span className="text-sm font-semibold text-blue-600">
@@ -734,6 +735,11 @@ export default function Admin({ onNavigate }) {
                                 ({order.driverId.phone})
                               </span>
                             )}
+                          </div>
+                        )}
+                        {order.channel === "pickup" && (
+                          <div className="mt-2">
+                            <span className="text-sm font-medium text-gray-600">Abholung</span>
                           </div>
                         )}
                         <div className="mt-2">
@@ -754,23 +760,26 @@ export default function Admin({ onNavigate }) {
                           </button>
                         )}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">Fahrer:</span>
-                            <select
-                              value={order.driverId?._id || order.driverId || ""}
-                              onChange={(e) => assignDriverToOrder(order._id, e.target.value)}
-                              className="select-clean text-sm min-w-[150px]"
-                            >
-                              <option value="">Kein Fahrer</option>
-                              {[...drivers]
-                                .sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" }))
-                                .map((driver) => (
-                                  <option key={driver._id} value={driver._id}>
-                                    {driver.name} {driver.phone ? `(${driver.phone})` : ""}
-                                  </option>
-                                ))}
-                            </select>
-                          </div>
+                          {/* Only show driver assignment for delivery orders, not pickup */}
+                          {order.channel !== "pickup" && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">Fahrer:</span>
+                              <select
+                                value={order.driverId?._id || order.driverId || ""}
+                                onChange={(e) => assignDriverToOrder(order._id, e.target.value)}
+                                className="select-clean text-sm min-w-[150px]"
+                              >
+                                <option value="">Kein Fahrer</option>
+                                {[...drivers]
+                                  .sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" }))
+                                  .map((driver) => (
+                                    <option key={driver._id} value={driver._id}>
+                                      {driver.name} {driver.phone ? `(${driver.phone})` : ""}
+                                    </option>
+                                  ))}
+                              </select>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium">Status ändern:</span>
                             <select
@@ -783,8 +792,15 @@ export default function Admin({ onNavigate }) {
                               <option value="new">neu</option>
                               <option value="accepted">akzeptiert</option>
                               <option value="preparing">in Bearbeitung</option>
-                              <option value="on_the_way">unterwegs</option>
-                              <option value="delivered">geliefert</option>
+                              {order.channel !== "pickup" && (
+                                <>
+                                  <option value="on_the_way">unterwegs</option>
+                                  <option value="delivered">geliefert</option>
+                                </>
+                              )}
+                              {order.channel === "pickup" && (
+                                <option value="delivered">abgeholt</option>
+                              )}
                               <option value="canceled">storniert</option>
                             </select>
                           </div>

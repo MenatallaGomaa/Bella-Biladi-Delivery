@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { translateStatus } from "../utils/statusTranslations";
 import { io } from "socket.io-client";
+import { printOrder, exportOrderAsPDF } from "../utils/orderPrint";
 
 // Normalize API base URL - remove trailing slash to avoid double slashes
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
@@ -663,8 +664,26 @@ export default function Admin({ onNavigate }) {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div className="font-semibold text-base">{order.ref}</div>
-                      <div className="text-sm text-gray-600">
-                        {new Date(order.createdAt).toLocaleString("de-DE")}
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm text-gray-600">
+                          {new Date(order.createdAt).toLocaleString("de-DE")}
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => printOrder(order)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded transition-colors"
+                            title="Drucken"
+                          >
+                            🖨️
+                          </button>
+                          <button
+                            onClick={() => exportOrderAsPDF(order)}
+                            className="bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-2 py-1 rounded transition-colors"
+                            title="Als PDF exportieren"
+                          >
+                            📄
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <div className="mt-3 grid gap-2 text-sm text-gray-700">

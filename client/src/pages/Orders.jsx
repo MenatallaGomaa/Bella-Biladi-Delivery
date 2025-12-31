@@ -4,7 +4,6 @@ import { euro } from "../api";
 import { useAuth } from "./AuthContext";
 import { translateStatus } from "../utils/statusTranslations";
 import DriverMap from "../components/DriverMap";
-import { printOrder, exportOrderAsPDF } from "../utils/orderPrint";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
 
@@ -114,40 +113,16 @@ export default function Orders({ onNavigate }) {
                 key={order._id || idx}
                 className="border border-gray-200 rounded-lg p-3 shadow-sm bg-gray-50 hover:bg-gray-100 hover:shadow-md transition-all"
               >
-                <div className="flex justify-between items-center mb-2">
-                  <h3 
-                    onClick={() => setSelectedOrderId(order._id)}
-                    className="font-semibold text-sm sm:text-base cursor-pointer flex-1"
-                  >
+                <div 
+                  onClick={() => setSelectedOrderId(order._id)}
+                  className="flex justify-between items-center mb-2 cursor-pointer"
+                >
+                  <h3 className="font-semibold text-sm sm:text-base">
                     {order.ref || `Bestellung #${orders.length - idx}`}
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">
-                      {new Date(order.createdAt || Date.now()).toLocaleString("de-DE")}
-                    </span>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          printOrder(order);
-                        }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded transition-colors"
-                        title="Drucken"
-                      >
-                        🖨️
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          exportOrderAsPDF(order);
-                        }}
-                        className="bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-2 py-1 rounded transition-colors"
-                        title="Als PDF exportieren"
-                      >
-                        📄
-                      </button>
-                    </div>
-                  </div>
+                  <span className="text-xs text-gray-500">
+                    {new Date(order.createdAt || Date.now()).toLocaleString("de-DE")}
+                  </span>
                 </div>
 
                 <div 
@@ -308,28 +283,12 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
         {/* Header */}
         <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center z-10">
           <h2 className="text-lg font-bold">Bestelldetails</h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => printOrder(order)}
-              className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-3 py-1.5 rounded transition-colors"
-              title="Drucken"
-            >
-              🖨️ Drucken
-            </button>
-            <button
-              onClick={() => exportOrderAsPDF(order)}
-              className="bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-3 py-1.5 rounded transition-colors"
-              title="Als PDF exportieren"
-            >
-              📄 PDF
-            </button>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center"
-            >
-              ×
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center"
+          >
+            ×
+          </button>
         </div>
 
         <div className="p-4 space-y-4">

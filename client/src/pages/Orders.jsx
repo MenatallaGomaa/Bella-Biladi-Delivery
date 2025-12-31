@@ -395,15 +395,28 @@ function OrderDetailsModal({ orderId, order, onClose, onNavigate }) {
               </div>
             </div>
 
-            {/* Customer Address */}
+            {/* Customer Address or Pickup Time */}
             {order.customer && (
               <div className="border-t pt-3">
-                <h4 className="text-xs font-semibold text-gray-600 mb-1">Lieferadresse:</h4>
-                <div className="text-sm text-gray-700">
-                  <p className="font-medium">{order.customer.name}</p>
-                  <p>{order.customer.address}</p>
-                  <p className="text-xs text-gray-500 mt-1">{order.customer.phone}</p>
-                </div>
+                {order.channel === "pickup" ? (
+                  <>
+                    <h4 className="text-xs font-semibold text-gray-600 mb-1">Abholzeit:</h4>
+                    <div className="text-sm text-gray-700">
+                      <p className="font-medium">{order.customer.desiredTime || "So schnell wie möglich"}</p>
+                      <p className="font-medium mt-2">{order.customer.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{order.customer.phone}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="text-xs font-semibold text-gray-600 mb-1">Lieferadresse:</h4>
+                    <div className="text-sm text-gray-700">
+                      <p className="font-medium">{order.customer.name}</p>
+                      <p>{order.customer.address}</p>
+                      <p className="text-xs text-gray-500 mt-1">{order.customer.phone}</p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

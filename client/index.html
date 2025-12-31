@@ -6,6 +6,67 @@
     <meta name="theme-color" content="#fbbf24" />
     <title>BellaBiladi</title>
     <link rel="icon" type="image/png" href="/logo.jpeg" />
+    
+    <!-- Structured Data for Google - Restaurant Ordering -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "Bella Biladi Pizza auf Rädern",
+      "image": "https://bellabiladipizzeria.com/logo.jpeg",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Probstheidaer Str. 21",
+        "addressLocality": "Leipzig",
+        "postalCode": "04277",
+        "addressCountry": "DE"
+      },
+      "telephone": "+4915213274837",
+      "servesCuisine": "Pizza",
+      "priceRange": "€1-10",
+      "url": "https://bellabiladipizzeria.com",
+      "sameAs": [
+        "https://www.instagram.com/bella.biladi.pizza.auf.raedern/",
+        "https://www.facebook.com/p/Bella-Biladi-Pizza-100086382703041/"
+      ],
+      "hasMenu": {
+        "@type": "Menu",
+        "hasMenuSection": [
+          {
+            "@type": "MenuSection",
+            "name": "Pizza",
+            "hasMenuItem": {
+              "@type": "MenuItem",
+              "name": "Pizza Biladi",
+              "description": "Biladi Tomatensauce, Käse",
+              "offers": {
+                "@type": "Offer",
+                "price": "9.00",
+                "priceCurrency": "EUR"
+              }
+            }
+          }
+        ]
+      },
+      "potentialAction": [
+        {
+          "@type": "OrderAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://bellabiladi-lieferservice.netlify.app",
+            "actionPlatform": [
+              "http://schema.org/DesktopWebPlatform",
+              "http://schema.org/MobileWebPlatform"
+            ]
+          },
+          "result": {
+            "@type": "Order",
+            "name": "Online Bestellung bei Bella Biladi"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body class="bg-amber-200">
     <div id="root"></div>

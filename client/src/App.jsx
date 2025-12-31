@@ -731,7 +731,7 @@ function MainApp() {
             {/* Copyright & Credits */}
             <div className="pt-6 border-t border-gray-200 text-center text-xs text-slate-500">
               <div className="mb-1">
-                © {new Date().getFullYear()} Bella Biladi. Alle Rechte vorbehalten.
+                © 2026 Bella Biladi. Alle Rechte vorbehalten.
               </div>
               <div>
                 Entwickelt von{" "}

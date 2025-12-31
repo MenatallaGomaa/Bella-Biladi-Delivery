@@ -56,8 +56,8 @@ export default function DeliveryInfoPopup({ onClose, showAtCheckout = false }) {
     {
       distance: "Bis 8 km",
       fee: "4,99€",
-      minOrder: "ab 75€",
-      description: "Bis 8 km 4,99€ ab 75€"
+      minOrder: "ab 20€",
+      description: "Bis 8 km 4,99€ ab 20€"
     }
   ];
 

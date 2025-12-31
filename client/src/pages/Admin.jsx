@@ -423,11 +423,6 @@ export default function Admin({ onNavigate }) {
       setTimeout(() => {
         fetchOrders(true);
       }, 500);
-      
-      // Show success message (non-blocking, delayed slightly to let UI update first)
-      setTimeout(() => {
-        alert("Bestellung bestätigt! Der Kunde erhält eine Bestätigungs-E-Mail.");
-      }, 300);
     } catch (err) {
       // Revert optimistic update on error
       fetchOrders();

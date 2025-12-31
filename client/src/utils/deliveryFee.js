@@ -79,13 +79,13 @@ export function calculateDeliveryFee(distanceKm, orderAmountCents) {
 
   // Up to 8 km
   if (distanceKm <= 8) {
-    if (orderAmountEuros >= 75) {
+    if (orderAmountEuros >= 20) {
       return { feeCents: 499, eligible: true }; // 4.99€
     }
     return {
       feeCents: 499,
       eligible: false,
-      reason: "Mindestbestellwert von 75€ nicht erreicht",
+      reason: "Mindestbestellwert von 20€ nicht erreicht",
     };
   }
 
@@ -117,7 +117,7 @@ export function getDeliveryFeeDescription(distanceKm) {
     return "Bis 6 km: 3,99€ (ab 30€)";
   }
   if (distanceKm <= 8) {
-    return "Bis 8 km: 4,99€ (ab 75€)";
+    return "Bis 8 km: 4,99€ (ab 20€)";
   }
   return "Lieferung nur bis 8 km möglich";
 }

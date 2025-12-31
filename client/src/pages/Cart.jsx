@@ -5,7 +5,10 @@ import { useAuth } from "./AuthContext";
 export default function Cart({ onNavigate }) {
   const { cart, addToCart, removeOneFromCart, removeAllFromCart } = useCart();
   const { user } = useAuth(); // ✅ get user
-  const [deliveryMode, setDeliveryMode] = useState("Lieferung");
+  // Read deliveryMode from localStorage on mount to preserve selection
+  const [deliveryMode, setDeliveryMode] = useState(() => {
+    return localStorage.getItem("deliveryMode") || "Lieferung";
+  });
 
   const total = cart.reduce((sum, item) => sum + item.priceCents, 0) / 100;
 
@@ -41,6 +44,11 @@ export default function Cart({ onNavigate }) {
     document.body.style.overflow = "hidden";
     return () => (document.body.style.overflow = "auto");
   }, []);
+
+  // Save deliveryMode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("deliveryMode", deliveryMode);
+  }, [deliveryMode]);
 
   // Handle checkout button click
   const handleCheckout = () => {

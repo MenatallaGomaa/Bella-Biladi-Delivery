@@ -208,10 +208,26 @@ export default function CheckoutPayment({ onNavigate }) {
     document.body.style.overflow = editing || showItems ? "hidden" : "auto";
   }, [editing, showItems]);
 
-  // Get delivery mode from localStorage
+  // Get delivery mode from localStorage and update when it changes
   const [deliveryMode, setDeliveryMode] = useState(() => {
     return localStorage.getItem("deliveryMode") || "Lieferung";
   });
+
+  // Update deliveryMode when localStorage changes (e.g., when navigating back from Cart)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedMode = localStorage.getItem("deliveryMode") || "Lieferung";
+      setDeliveryMode(storedMode);
+    };
+
+    // Check on mount and when window regains focus (user navigated back)
+    handleStorageChange();
+    window.addEventListener("focus", handleStorageChange);
+    
+    return () => {
+      window.removeEventListener("focus", handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {

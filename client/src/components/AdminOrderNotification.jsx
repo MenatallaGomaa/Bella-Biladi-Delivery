@@ -338,9 +338,6 @@ export default function AdminOrderNotification({ onNavigate }) {
         popupTimerRef.current = null;
       }
       
-      // Show success message first
-      alert("Bestellung bestätigt! Der Kunde hat eine Bestätigungs-E-Mail erhalten.");
-      
       // Wait a moment for backend to process, then fetch next order
       // This ensures the backend has updated the order status before we fetch
       setTimeout(async () => {
@@ -471,7 +468,7 @@ export default function AdminOrderNotification({ onNavigate }) {
                 <p className="break-words leading-relaxed"><strong>Adresse:</strong> {newOrderPopup.customer.address}</p>
               )}
               {newOrderPopup.customer?.desiredTime && (
-                <p className="break-words leading-relaxed"><strong>Gewünschte Lieferzeit:</strong> {newOrderPopup.customer.desiredTime}</p>
+                <p className="break-words leading-relaxed"><strong>{newOrderPopup.channel === "pickup" ? "Gewünschte Abholzeit:" : "Gewünschte Lieferzeit:"}</strong> {newOrderPopup.customer.desiredTime}</p>
               )}
               {newOrderPopup.customer?.notes && (
                 <p className="mt-2 text-gray-600 break-words leading-relaxed"><strong>Notiz:</strong> {newOrderPopup.customer.notes}</p>

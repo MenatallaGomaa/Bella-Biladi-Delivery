@@ -3,15 +3,12 @@ import { useState, useEffect } from "react";
 export default function DeliveryInfoPopup({ onClose, showAtCheckout = false }) {
   const [showPromotion, setShowPromotion] = useState(true);
 
-  // Calculate promotion end date (3 months from today)
+  // Fixed promotion end date: April 1, 2026
   const getPromotionEndDate = () => {
-    const today = new Date();
-    const endDate = new Date(today);
-    endDate.setMonth(today.getMonth() + 3);
-    return endDate;
+    return new Date(2026, 3, 1); // April 1, 2026 (month is 0-indexed, so 3 = April)
   };
 
-  // Format date in German format (e.g., "8. März 2026")
+  // Format date in German format (e.g., "1. April 2026")
   const formatGermanDate = (date) => {
     const months = [
       "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -23,7 +20,7 @@ export default function DeliveryInfoPopup({ onClose, showAtCheckout = false }) {
     return `${day}. ${month} ${year}`;
   };
 
-  // Check if promotion is still active (3 months from today)
+  // Check if promotion is still active (until April 1, 2026)
   const isPromotionActive = () => {
     const today = new Date();
     const promotionEndDate = getPromotionEndDate();

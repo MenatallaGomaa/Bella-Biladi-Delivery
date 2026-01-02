@@ -278,7 +278,7 @@ const items = [
     description: "BBQ-Sauce, Rindersalami, Sucuk und Aubergine.",
     priceCents: 1100,
     category: "Pizza",
-    imageUrl: "/bbq.jpeg",
+    imageUrl: "/BBQ.jpeg",
   },
   {
     name: "Calzone Klassisch",

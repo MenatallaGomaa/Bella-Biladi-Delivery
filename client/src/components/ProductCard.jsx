@@ -156,7 +156,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
     if (isPizza || isPizzaRoll || isFingerfood || isPommesFrites || isBurger) {
       setIsModalOpen(true);
     } else {
-      addToCart({ ...item, baseItemId: baseId });
+      addToCart({ ...item, name: item.name?.replace(/Coppola/gi, "Cippola"), baseItemId: baseId });
     }
   };
   
@@ -247,7 +247,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
 
     const customItem = {
       ...item,
-      name: `${item.name}${detailSuffix}`,
+      name: `${item.name?.replace(/Coppola/gi, "Cippola")}${detailSuffix}`,
       description: item.description,
       priceCents: item.priceCents + extrasPrice,
       customizations,
@@ -550,7 +550,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
               onError={handleImageError}
             />
           )}
-          <div className="mt-2 font-medium flex-shrink-0">{item.name}</div>
+          <div className="mt-2 font-medium flex-shrink-0">{item.name?.replace(/Coppola/gi, "Cippola")}</div>
           <div className="text-xs text-gray-500 mt-1 leading-relaxed flex-grow min-h-[3rem]">
             {item.description}
             {isBurger && (
@@ -590,7 +590,7 @@ export function ProductCard({ item, compact = false, delay = 0 }) {
         onKeyDown={handleCardActivate}
       >
         <div className="flex-1">
-          <div className="font-medium text-base sm:text-lg">{item.name}</div>
+          <div className="font-medium text-base sm:text-lg">{item.name?.replace(/Coppola/gi, "Cippola")}</div>
           <div className="text-sm text-gray-500 mt-1 leading-relaxed max-h-16 overflow-hidden">
             {item.description}
             {isBurger && (

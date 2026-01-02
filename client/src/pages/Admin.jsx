@@ -106,11 +106,21 @@ export default function Admin({ onNavigate }) {
       if (!checkForNew) setOrdersLoading(true);
       setOrdersError("");
       const url = new URL(`${API_BASE}/api/orders`);
-      if (status) url.searchParams.set("status", status);
+      // Handle "picked_up" status specially - filter pickup orders with delivered status
+      if (status && status !== "picked_up") {
+        url.searchParams.set("status", status);
+      }
       const res = await fetch(url.toString(), { headers });
       if (!res.ok) throw new Error("Bestellungen konnten nicht geladen werden");
       const data = await res.json();
-      const ordersList = Array.isArray(data) ? data : [];
+      let ordersList = Array.isArray(data) ? data : [];
+      
+      // Filter for "abgeholt" (picked up) - pickup orders with delivered status
+      if (status === "picked_up") {
+        ordersList = ordersList.filter(order => 
+          order.status === "delivered" && order.channel === "pickup"
+        );
+      }
       
       // Update orders list (popup is handled by global AdminOrderNotification component)
       setOrders(ordersList);
@@ -632,6 +642,7 @@ export default function Admin({ onNavigate }) {
                 <option value="preparing">in Bearbeitung</option>
                 <option value="on_the_way">unterwegs</option>
                 <option value="delivered">geliefert</option>
+                <option value="picked_up">abgeholt</option>
                 <option value="canceled">storniert</option>
               </select>
             </div>

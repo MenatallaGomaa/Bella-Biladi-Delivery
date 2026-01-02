@@ -23,6 +23,8 @@ import Datenschutz from "./pages/Datenschutz";
 import AGB from "./pages/AGB";
 import { getApiBaseUrl, createApiUrl } from "./utils/apiUrl.js";
 import DeliveryInfoPopup from "./components/DeliveryInfoPopup";
+import StoreHoursPopup from "./components/StoreHoursPopup";
+import { isStoreOpen } from "./utils/storeHours";
 import "./index.css";
 
 function MainApp() {
@@ -64,6 +66,7 @@ function MainApp() {
   const isUserClickRef = useRef(false); // Track if active change is from user click
   const activeRef = useRef(active); // Keep ref of active to avoid dependency issues
   const [showDeliveryPopup, setShowDeliveryPopup] = useState(false);
+  const [showStoreHoursPopup, setShowStoreHoursPopup] = useState(false);
 
   // 🧭 Check URL on mount for reset-password token and navigate accordingly
   useEffect(() => {
@@ -107,17 +110,25 @@ function MainApp() {
     window.history.pushState({}, "", path);
   }, [page]);
 
-  // 📦 Show delivery info popup on every page load
+  // 📦 Show appropriate popup on every page load
   useEffect(() => {
     // Show popup after a short delay to let page load
     const timer = setTimeout(() => {
-      setShowDeliveryPopup(true);
+      if (isStoreOpen()) {
+        setShowDeliveryPopup(true);
+      } else {
+        setShowStoreHoursPopup(true);
+      }
     }, 1000);
     return () => clearTimeout(timer);
   }, []);
 
   const handleCloseDeliveryPopup = () => {
     setShowDeliveryPopup(false);
+  };
+
+  const handleCloseStoreHoursPopup = () => {
+    setShowStoreHoursPopup(false);
   };
 
   // 🔄 Keep-alive ping to prevent backend cold starts (only in production)
@@ -790,6 +801,11 @@ function MainApp() {
       {/* 📦 Delivery Info Popup */}
       {showDeliveryPopup && (
         <DeliveryInfoPopup onClose={handleCloseDeliveryPopup} />
+      )}
+
+      {/* 📦 Store Hours Popup (when closed) */}
+      {showStoreHoursPopup && (
+        <StoreHoursPopup onClose={handleCloseStoreHoursPopup} />
       )}
     </div>
   );

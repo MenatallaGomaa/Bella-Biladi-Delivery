@@ -5,6 +5,7 @@ import { reverseGeocode, geocodeAddress } from "../utils/geocode";
 import { calculateDeliveryFee, getDeliveryFeeDescription, calculateDistance } from "../utils/deliveryFee";
 import { RESTAURANT_LOCATION } from "../utils/restaurantLocation";
 import DeliveryInfoPopup from "../components/DeliveryInfoPopup";
+import { isStoreOpen } from "../utils/storeHours";
 
 import userIcon from "/public/user.png";
 import homeIcon from "/public/home.png";
@@ -502,6 +503,15 @@ export default function CheckoutPayment({ onNavigate }) {
     }
 
     if (!validateForm()) return;
+
+    // Check if store is open when trying to order "asap"
+    if (form.time.type === "asap" && !isStoreOpen()) {
+      setSubmitError("Wir sind derzeit geschlossen. Bitte wählen Sie 'Für später planen' aus.");
+      setErrors((prev) => ({ ...prev, time: "Store is closed" }));
+      setEditing("time");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
 
     if (!grouped.length) {
       setSubmitError("Dein Warenkorb ist leer.");
@@ -1221,12 +1231,14 @@ export default function CheckoutPayment({ onNavigate }) {
             {editing === "time" && (
               <>
                 <h3 className="text-lg font-semibold mb-4">{deliveryMode === "Abholung" ? "Abholzeit" : "Lieferzeit"}</h3>
-                <label className="flex items-center gap-2 mb-3">
+                <label className={`flex items-center gap-2 mb-3 ${!isStoreOpen() ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
                   <input
                     type="radio"
                     name="time"
                     checked={form.time.type === "asap"}
+                    disabled={!isStoreOpen()}
                     onChange={() => {
+                      if (!isStoreOpen()) return;
                       setSubmitError("");
                       setValidationAttempted(false);
                       setErrors((prev) => ({ ...prev, time: undefined }));
@@ -1236,7 +1248,12 @@ export default function CheckoutPayment({ onNavigate }) {
                       });
                     }}
                   />
-                  <span>So schnell wie möglich</span>
+                  <span>
+                    So schnell wie möglich
+                    {!isStoreOpen() && (
+                      <span className="ml-2 text-xs text-red-600">(Geschlossen)</span>
+                    )}
+                  </span>
                 </label>
                 <label className="flex items-center gap-2 mb-3">
                   <input

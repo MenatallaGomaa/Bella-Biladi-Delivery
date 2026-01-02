@@ -508,9 +508,9 @@ export default function CheckoutPayment({ onNavigate }) {
       return;
     }
 
-    // Validate minimum order amount (20€)
+    // Validate minimum order amount (20€) - only for delivery, not for pickup
     const MINIMUM_ORDER_AMOUNT = 20.0;
-    if (subtotal < MINIMUM_ORDER_AMOUNT) {
+    if (deliveryMode !== "Abholung" && subtotal < MINIMUM_ORDER_AMOUNT) {
       const remaining = (MINIMUM_ORDER_AMOUNT - subtotal).toFixed(2);
       setSubmitError(
         `Mindestbestellwert nicht erreicht. Bitte füge noch Artikel im Wert von ${remaining} € hinzu. (Mindestbestellwert: ${MINIMUM_ORDER_AMOUNT.toFixed(2)} €)`
@@ -838,11 +838,11 @@ export default function CheckoutPayment({ onNavigate }) {
 
             <div className="flex justify-between mt-4">
               <span>Zwischensumme</span>
-              <span className={subtotal < 20 ? "text-red-600 font-semibold" : ""}>
+              <span className={subtotal < 20 && deliveryMode !== "Abholung" ? "text-red-600 font-semibold" : ""}>
                 {subtotal.toFixed(2)} €
               </span>
             </div>
-            {subtotal < 20 && !confirmation && (
+            {subtotal < 20 && deliveryMode !== "Abholung" && !confirmation && (
               <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
                 ⚠️ Mindestbestellwert: 20,00 € (noch {(20 - subtotal).toFixed(2)} € fehlen)
               </div>
@@ -923,12 +923,12 @@ export default function CheckoutPayment({ onNavigate }) {
 
           <button
             onClick={handleOrderSubmit}
-            disabled={submitting || cart.length === 0 || subtotal < 20}
+            disabled={submitting || cart.length === 0 || (deliveryMode !== "Abholung" && subtotal < 20)}
             className="mt-6 w-full bg-amber-400 py-3 rounded-lg font-semibold hover:bg-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {submitting ? "Bestellung wird gesendet…" : "Bestellen & Bezahlen"}
           </button>
-          {subtotal < 20 && !confirmation && (
+          {subtotal < 20 && deliveryMode !== "Abholung" && !confirmation && (
             <p className="mt-2 text-xs text-center text-red-600">
               Mindestbestellwert von 20,00 € nicht erreicht
             </p>

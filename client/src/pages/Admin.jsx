@@ -756,7 +756,9 @@ export default function Admin({ onNavigate }) {
                         <div className="mt-2">
                           <span className="text-sm font-medium">Status: </span>
                           <span className="text-sm font-semibold text-amber-600">
-                            {translateStatus(order.status)}
+                            {order.status === "delivered" && order.channel === "pickup" 
+                              ? "Abgeholt" 
+                              : translateStatus(order.status)}
                           </span>
                         </div>
                       </div>

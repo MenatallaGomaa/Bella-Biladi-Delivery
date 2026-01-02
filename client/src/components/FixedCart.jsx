@@ -5,13 +5,46 @@ import { useAuth } from "../pages/AuthContext";
 export default function FixedCart({ onNavigate }) {
   const { cart, addToCart, removeOneFromCart, removeAllFromCart, lastAdded, isCartExpanded, setIsCartExpanded } = useCart();
   const { user } = useAuth();
-  const [deliveryMode, setDeliveryMode] = useState("Lieferung");
+  // Read deliveryMode from localStorage on mount to preserve selection (same logic as Cart.jsx)
+  const [deliveryMode, setDeliveryMode] = useState(() => {
+    return localStorage.getItem("deliveryMode") || "Lieferung";
+  });
   const hasAutoExpandedRef = useRef(false);
   const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 0);
   
   // Sync local state with context
   const isExpanded = isCartExpanded;
   const setIsExpanded = setIsCartExpanded;
+
+  // Save deliveryMode to localStorage whenever it changes (same logic as Cart.jsx)
+  useEffect(() => {
+    localStorage.setItem("deliveryMode", deliveryMode);
+  }, [deliveryMode]);
+
+  // Listen for localStorage changes from other components (e.g., Cart.jsx) to stay in sync
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "deliveryMode" && e.newValue) {
+        setDeliveryMode(e.newValue);
+      }
+    };
+
+    // Listen for storage events (changes from other tabs/windows)
+    window.addEventListener("storage", handleStorageChange);
+
+    // Also check localStorage periodically for changes within the same tab
+    const interval = setInterval(() => {
+      const storedMode = localStorage.getItem("deliveryMode");
+      if (storedMode && storedMode !== deliveryMode) {
+        setDeliveryMode(storedMode);
+      }
+    }, 100);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [deliveryMode]);
 
   // Auto-expand only the FIRST time an item is added
   useEffect(() => {
@@ -82,6 +115,9 @@ export default function FixedCart({ onNavigate }) {
   }, [cart]);
 
   const handleCheckout = () => {
+    // Store delivery mode for checkout (same logic as Cart.jsx)
+    localStorage.setItem("deliveryMode", deliveryMode);
+    
     if (user) {
       onNavigate("CheckoutPayment");
     } else {

@@ -9,17 +9,23 @@
     <title>Bella Biladi Pizza auf Rädern - Online Bestellen</title>
     <meta name="title" content="Bella Biladi Pizza auf Rädern - Online Bestellen" />
     <meta name="description" content="Bestellen Sie Ihre Lieblingspizza online bei Bella Biladi Pizza auf Rädern. Schnelle Lieferung in Leipzig. Jetzt bestellen!" />
+    <meta name="application-name" content="Bella Biladi Pizza" />
+    <meta name="apple-mobile-web-app-title" content="Bella Biladi" />
     
     <!-- Favicon -->
     <link rel="icon" type="image/jpeg" href="/logo.jpeg" />
     <link rel="apple-touch-icon" href="/logo.jpeg" />
+    <link rel="manifest" href="/manifest.json" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Bella Biladi Pizza auf Rädern" />
     <meta property="og:url" content="https://bellabiladi-lieferservice.netlify.app" />
     <meta property="og:title" content="Bella Biladi Pizza auf Rädern - Online Bestellen" />
     <meta property="og:description" content="Bestellen Sie Ihre Lieblingspizza online bei Bella Biladi Pizza auf Rädern. Schnelle Lieferung in Leipzig." />
     <meta property="og:image" content="https://bellabiladi-lieferservice.netlify.app/logo.jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
@@ -72,9 +78,14 @@
       "potentialAction": [
         {
           "@type": "OrderAction",
+          "deliveryMethod": [
+            "http://purl.org/goodrelations/v1#DeliveryModePickUp",
+            "http://purl.org/goodrelations/v1#DeliveryModeDirectDownload"
+          ],
           "target": {
             "@type": "EntryPoint",
             "urlTemplate": "https://bellabiladi-lieferservice.netlify.app",
+            "inLanguage": "de",
             "actionPlatform": [
               "http://schema.org/DesktopWebPlatform",
               "http://schema.org/MobileWebPlatform"
@@ -82,8 +93,22 @@
           },
           "result": {
             "@type": "Order",
-            "name": "Online Bestellung bei Bella Biladi"
+            "name": "Online Bestellung bei Bella Biladi Pizza auf Rädern"
           }
+        }
+      ],
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+          "opens": "11:00",
+          "closes": "22:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": "Sunday",
+          "opens": "11:00",
+          "closes": "23:00"
         }
       ]
     }

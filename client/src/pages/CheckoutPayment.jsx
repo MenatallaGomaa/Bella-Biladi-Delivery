@@ -99,9 +99,9 @@ function getAvailableTimeSlots(targetDate) {
   
   const slots = [];
   const closeTime = storeHours.close * 60; // Convert to minutes
-  const lastOrderTime = closeTime - 30; // Last 30 minutes no orders
+  const lastOrderTime = closeTime - 15; // Last 15 minutes no orders (until 21:45)
   
-  // Generate time slots from opening time to closing time (minus 30 mins) in 15-minute intervals
+  // Generate time slots from opening time to closing time (minus 15 mins) in 15-minute intervals
   for (let hour = storeHours.open; hour < storeHours.close; hour++) {
     for (let minute = 0; minute < 60; minute += 15) {
       const slotTime = hour * 60 + minute;

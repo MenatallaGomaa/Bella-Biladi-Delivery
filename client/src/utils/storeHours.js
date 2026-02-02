@@ -28,7 +28,7 @@ export function isStoreOpen() {
   
   const openTime = storeHours.open * 60; // Convert to minutes
   const closeTime = storeHours.close * 60; // Convert to minutes
-  const lastOrderTime = closeTime - 30; // Last 30 minutes no orders
+  const lastOrderTime = closeTime - 15; // Last 15 minutes no orders (until 21:45)
   
   return currentTimeInMinutes >= openTime && currentTimeInMinutes < lastOrderTime;
 }

@@ -122,7 +122,7 @@ export default function StoreHoursPopup({ onClose }) {
               ℹ️ Wichtige Hinweise
             </h4>
             <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-              <li>Letzte Bestellung: 30 Minuten vor Schließung</li>
+              <li>Letzte Bestellung: 15 Minuten vor Schließung (bis 21:45 Uhr)</li>
               <li>Bitte besuchen Sie uns später während der Öffnungszeiten</li>
               <li>Sie können bereits jetzt für später bestellen</li>
             </ul>

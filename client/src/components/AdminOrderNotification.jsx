@@ -25,16 +25,110 @@ export default function AdminOrderNotification({ onNavigate }) {
   const userDismissedRef = useRef(false);
   // Track how many times popup has been shown for each order (max 3)
   const popupShowCountRef = useRef(new Map()); // Map<orderId, count>
+  // HTML5 Audio fallback for better background playback
+  const audioElementRef = useRef(null);
+  const audioIntervalRef = useRef(null);
 
   // Check if user is admin
   const isAdmin = user?.role === "admin";
 
-  // Function to play notification sound (looping until stopped)
+  // Function to create a beep sound as a data URL for HTML5 Audio (better background playback)
+  const createBeepDataUrl = useCallback(() => {
+    // Create a short beep sound using Web Audio API and export as WAV
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const sampleRate = audioContext.sampleRate;
+    const duration = 0.4; // 400ms beep
+    const numSamples = sampleRate * duration;
+    const buffer = audioContext.createBuffer(1, numSamples, sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    // Generate sine wave at 800Hz with envelope
+    const frequency = 800;
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate;
+      // Apply envelope (fade in/out)
+      let envelope = 1;
+      if (t < 0.1) {
+        envelope = t / 0.1; // Fade in
+      } else if (t > 0.3) {
+        envelope = (0.4 - t) / 0.1; // Fade out
+      }
+      data[i] = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.8; // 0.8 = volume
+    }
+    
+    // Convert to WAV (simplified inline WAV encoder)
+    const writeString = (view, offset, string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    const floatTo16BitPCM = (output, offset, input) => {
+      for (let i = 0; i < input.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, input[i]));
+        output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      }
+    };
+    
+    const arrayBuffer = new ArrayBuffer(44 + numSamples * 2);
+    const view = new DataView(arrayBuffer);
+    
+    // WAV header
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + numSamples * 2, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, numSamples * 2, true);
+    floatTo16BitPCM(view, 44, data);
+    
+    audioContext.close();
+    
+    const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+    return URL.createObjectURL(blob);
+  }, []);
+
+  // Function to play notification sound (looping until stopped) - LOUD and works in background
   const playNotificationSound = useCallback(() => {
     try {
       // Don't start if already playing
       if (isPlayingRef.current) return;
+      
+      isPlayingRef.current = true;
 
+      // Method 1: HTML5 Audio (works better in background tabs)
+      if (!audioElementRef.current) {
+        const beepUrl = createBeepDataUrl();
+        audioElementRef.current = new Audio(beepUrl);
+        audioElementRef.current.volume = 1.0; // Maximum volume
+        audioElementRef.current.preload = 'auto';
+      }
+      
+      // Play the audio element in a loop
+      const playAudioLoop = () => {
+        if (!isPlayingRef.current) return;
+        
+        const audio = audioElementRef.current;
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play().catch((err) => {
+            console.warn("HTML5 Audio play failed:", err);
+          });
+        }
+      };
+      
+      // Play immediately and then every 500ms
+      playAudioLoop();
+      audioIntervalRef.current = setInterval(playAudioLoop, 500);
+
+      // Method 2: Web Audio API as fallback (for better quality when tab is focused)
       // Create audio context if it doesn't exist
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -48,6 +142,8 @@ export default function AdminOrderNotification({ onNavigate }) {
       }
 
       const playBeep = () => {
+        if (!isPlayingRef.current) return;
+        
         // Stop any currently playing sound
         if (audioSourceRef.current) {
           try {
@@ -70,10 +166,10 @@ export default function AdminOrderNotification({ onNavigate }) {
         oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
         oscillator.type = 'sine';
 
-        // Set volume envelope (fade in and out)
+        // Set volume envelope (fade in and out) - LOUDER for better noticeability
         gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
-        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.2);
+        gainNode.gain.linearRampToValueAtTime(0.8, audioContext.currentTime + 0.1);
+        gainNode.gain.linearRampToValueAtTime(0.8, audioContext.currentTime + 0.2);
         gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.4);
 
         // Play the sound
@@ -93,23 +189,36 @@ export default function AdminOrderNotification({ onNavigate }) {
         }
       };
 
-      // Start playing
-      isPlayingRef.current = true;
+      // Start Web Audio API beeps as well
       playBeep();
     } catch (err) {
       console.warn("Could not play notification sound:", err);
       isPlayingRef.current = false;
     }
-  }, []);
+  }, [createBeepDataUrl]);
 
   // Function to stop notification sound
   const stopNotificationSound = useCallback(() => {
     try {
+      // Stop Web Audio API
       if (audioSourceRef.current) {
         audioSourceRef.current.stop();
         audioSourceRef.current.disconnect();
         audioSourceRef.current = null;
       }
+      
+      // Stop HTML5 Audio
+      if (audioElementRef.current) {
+        audioElementRef.current.pause();
+        audioElementRef.current.currentTime = 0;
+      }
+      
+      // Clear interval
+      if (audioIntervalRef.current) {
+        clearInterval(audioIntervalRef.current);
+        audioIntervalRef.current = null;
+      }
+      
       isPlayingRef.current = false;
     } catch (err) {
       console.warn("Could not stop notification sound:", err);
@@ -279,6 +388,17 @@ export default function AdminOrderNotification({ onNavigate }) {
       stopNotificationSound();
       if (audioContextRef.current) {
         audioContextRef.current.close().catch(() => {});
+      }
+      if (audioElementRef.current) {
+        const url = audioElementRef.current.src;
+        audioElementRef.current.pause();
+        audioElementRef.current = null;
+        if (url && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      }
+      if (audioIntervalRef.current) {
+        clearInterval(audioIntervalRef.current);
       }
       if (popupTimerRef.current) {
         clearInterval(popupTimerRef.current);

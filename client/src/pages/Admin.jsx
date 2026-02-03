@@ -707,6 +707,23 @@ export default function Admin({ onNavigate }) {
                         </div>
                       ))}
                     </div>
+                    {/* Order Totals */}
+                    <div className="mt-3 pt-3 border-t border-gray-300 space-y-1 text-sm">
+                      <div className="flex justify-between gap-3 text-gray-700">
+                        <span>Zwischensumme:</span>
+                        <span>{((order.totals?.subtotalCents || 0) / 100).toFixed(2)} €</span>
+                      </div>
+                      {order.totals?.deliveryFeeCents > 0 && (
+                        <div className="flex justify-between gap-3 text-gray-700">
+                          <span>Liefergebühr:</span>
+                          <span>{((order.totals?.deliveryFeeCents || 0) / 100).toFixed(2)} €</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between gap-3 font-bold text-base text-amber-600 pt-1">
+                        <span>Gesamtsumme:</span>
+                        <span>{((order.totals?.grandTotalCents || 0) / 100).toFixed(2)} €</span>
+                      </div>
+                    </div>
                     <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
                       <div>
                         <div>

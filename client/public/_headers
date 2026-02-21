@@ -10,6 +10,19 @@
 /manifest.json
   Cache-Control: public, max-age=3600
   Content-Type: application/manifest+json
+/site.webmanifest
+  Cache-Control: public, max-age=3600
+  Content-Type: application/manifest+json
+
+# OG/social image
+/og-image.png
+  Cache-Control: public, max-age=31536000, immutable
+/apple-touch-icon.png
+  Cache-Control: public, max-age=31536000, immutable
+/favicon.ico
+  Cache-Control: public, max-age=31536000, immutable
+/favicon-32x32.png
+  Cache-Control: public, max-age=31536000, immutable
 
 # Security headers
 /*

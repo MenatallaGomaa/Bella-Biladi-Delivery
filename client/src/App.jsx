@@ -803,8 +803,8 @@ function MainApp() {
         <DeliveryInfoPopup onClose={handleCloseDeliveryPopup} />
       )}
 
-      {/* 📦 Store Hours Popup (when closed) */}
-      {showStoreHoursPopup && (
+      {/* 📦 Store Hours Popup (when closed, only for non-admin users) */}
+      {showStoreHoursPopup && user?.role !== "admin" && (
         <StoreHoursPopup onClose={handleCloseStoreHoursPopup} />
       )}
     </div>

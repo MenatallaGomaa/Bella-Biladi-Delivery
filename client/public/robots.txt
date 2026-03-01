@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://bellabiladi-lieferservice.netlify.app/sitemap.xml

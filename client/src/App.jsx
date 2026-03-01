@@ -798,8 +798,8 @@ function MainApp() {
       {/* 🔔 Admin Order Notification - Global popup for new orders */}
       <AdminOrderNotification onNavigate={handleNavigate} />
 
-      {/* 📦 Delivery Info Popup */}
-      {showDeliveryPopup && (
+      {/* 📦 Delivery Info Popup (only for non-admin users) */}
+      {showDeliveryPopup && user?.role !== "admin" && (
         <DeliveryInfoPopup onClose={handleCloseDeliveryPopup} />
       )}
 

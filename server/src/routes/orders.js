@@ -294,6 +294,115 @@ async function sendCustomerConfirmation(order, cart, customerInfo, user, subtota
   }
 }
 
+/** Normalize German-style numbers to E.164 (e.g. 01521… → +491521…) for Twilio */
+function toE164De(phone) {
+  if (!phone || typeof phone !== "string") return null;
+  let d = phone.replace(/[\s\-/().]/g, "").trim();
+  if (!d) return null;
+  if (d.startsWith("+")) {
+    return /^\+[1-9]\d{6,14}$/.test(d) ? d : null;
+  }
+  if (d.startsWith("00")) {
+    d = `+${d.slice(2)}`;
+    return /^\+[1-9]\d{6,14}$/.test(d) ? d : null;
+  }
+  if (d.startsWith("0")) {
+    d = `+49${d.slice(1)}`;
+    return /^\+49[1-9]\d{8,11}$/.test(d) ? d : null;
+  }
+  if (/^[1-9]\d{8,12}$/.test(d)) {
+    d = `+49${d}`;
+    return d;
+  }
+  return null;
+}
+
+/** Short email right after order is saved so customers know it went through (reduces duplicate orders). */
+async function sendOrderReceivedAcknowledgement(order, customerInfo, user, totalCents) {
+  if (!transporter) {
+    console.warn("⚠️ Order receipt email skipped: no email transporter");
+    return { success: false, error: "no transporter" };
+  }
+  const recipientEmail = user?.email || customerInfo?.email;
+  if (!recipientEmail) {
+    console.warn("⚠️ Order receipt email skipped: no customer email");
+    return { success: false, error: "no email" };
+  }
+
+  const totalStr = (totalCents / 100).toFixed(2);
+  const name = customerInfo?.name || user?.name || "Gast";
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;">
+      <div style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);padding:24px;text-align:center;border-radius:8px 8px 0 0;">
+        <h1 style="color:#fff;margin:0;font-size:22px;">🍕 Bella Biladi</h1>
+        <p style="color:#fef3c7;margin:8px 0 0;font-size:15px;">Ihre Bestellung ist bei uns eingegangen</p>
+      </div>
+      <div style="padding:24px;background:#fff;border:1px solid #e5e7eb;border-top:0;border-radius:0 0 8px 8px;">
+        <p style="font-size:16px;line-height:1.6;">Hallo ${name},</p>
+        <p style="font-size:16px;line-height:1.6;">wir haben Ihre Online-Bestellung <strong>${order.ref}</strong> erhalten (Gesamtbetrag: <strong>${totalStr}&nbsp;€</strong>).</p>
+        <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:14px;margin:20px 0;border-radius:4px;">
+          <p style="margin:0;font-size:15px;color:#92400e;"><strong>Wichtig:</strong> Bitte geben Sie dieselbe Bestellung nicht erneut auf. Sie erhalten nach Prüfung in der Küche eine weitere E-Mail mit den Details zur Zubereitung und Lieferzeit.</p>
+        </div>
+        <p style="font-size:14px;color:#6b7280;">Bei Fragen: 01521 3274837 · Probstheidaer Straße 21, 04277 Leipzig</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Bella Biladi 🍕" <${process.env.EMAIL_USER || "no-reply@bellabiladi.de"}>`,
+      to: recipientEmail,
+      subject: `Bestellung eingegangen: ${order.ref}`,
+      html,
+    });
+    console.log(`✅ Order receipt email sent to ${recipientEmail} for ${order.ref}`);
+    if (process.env.NODE_ENV !== "production") {
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      if (previewUrl) console.log("📨 Receipt email preview:", previewUrl);
+    }
+    return { success: true };
+  } catch (err) {
+    console.error(`❌ Order receipt email failed for ${order.ref}:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/** Optional SMS via Twilio when TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER are set */
+async function sendOrderReceivedSms(order, customerInfo, totalCents) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_FROM;
+  if (!sid || !token || !from) return;
+
+  const to = toE164De(customerInfo?.phone || "");
+  if (!to) {
+    console.log(`📱 SMS skipped for ${order.ref}: invalid or missing phone`);
+    return;
+  }
+
+  const totalStr = (totalCents / 100).toFixed(2);
+  const body = `Bella Biladi: Bestellung ${order.ref} ist eingegangen (${totalStr} EUR). Bitte nicht erneut bestellen. Details per E-Mail.`;
+
+  const auth = Buffer.from(`${sid}:${token}`).toString("base64");
+  const params = new URLSearchParams({ To: to, From: from, Body: body });
+
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`❌ Twilio SMS failed for ${order.ref}:`, res.status, text);
+    return;
+  }
+  console.log(`✅ Order receipt SMS sent to ${to} for ${order.ref}`);
+}
+
 // ✅ Helper function to send admin notification email
 async function sendAdminNotification(order, cart, customerInfo, subtotal, total) {
   if (!transporter) return;
@@ -553,14 +662,19 @@ r.post("/", async (req, res) => {
     // Log that response was sent
     console.log(`📤 Response sent for order ${order.ref} (total time: ${Date.now() - orderStartTime}ms)`);
 
-    // ✅ Send admin notification email asynchronously AFTER response is sent
-    // Customer email will be sent only after admin confirms the order
+    // ✅ After response: notify customer (email + optional SMS) so they know the order arrived; then notify admin
+    // Full confirmation email still goes out when admin accepts the order in the dashboard
     setImmediate(() => {
-      if (transporter) {
-        sendAdminNotification(order, cart, customerInfo, subtotal, total).catch((err) => {
-          console.error("❌ Admin email send failed:", err.message);
-        });
-      }
+      const run = async () => {
+        await Promise.allSettled([
+          sendOrderReceivedAcknowledgement(order, customerInfo, user, total),
+          sendOrderReceivedSms(order, customerInfo, total),
+          transporter
+            ? sendAdminNotification(order, cart, customerInfo, subtotal, total)
+            : Promise.resolve(),
+        ]);
+      };
+      run().catch((err) => console.error("❌ Post-order notifications error:", err.message));
     });
   } catch (err) {
     console.error("❌ Error creating order:", err);

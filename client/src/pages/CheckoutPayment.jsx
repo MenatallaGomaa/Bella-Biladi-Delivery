@@ -896,13 +896,16 @@ export default function CheckoutPayment({ onNavigate }) {
           {confirmation && (
             <div className="mt-4 bg-green-100 border border-green-300 text-green-700 text-xs sm:text-sm px-3 py-3 rounded">
               <div className="font-semibold text-sm">
-                Bestellung bestätigt! 🎉
+                Bestellung eingegangen! 🎉
               </div>
               <p className="mt-1">
                 Deine Bestellnummer lautet <strong>{confirmation.ref}</strong>.
               </p>
               <p className="mt-1">
-                Wir haben dir eine Bestätigung an {confirmation.email} gesendet.
+                Du erhältst in Kürze eine E-Mail an <strong>{confirmation.email}</strong>, dass die Bestellung bei uns angekommen ist. Wenn SMS aktiv ist, kommt zusätzlich eine kurze Nachricht auf dein Telefon.
+              </p>
+              <p className="mt-1 font-medium">
+                Bitte dieselbe Bestellung nicht erneut abschicken — eine ausführliche Bestätigung mit Lieferdetails schicken wir dir, sobald die Küche die Bestellung bestätigt hat.
               </p>
               <div className="mt-3 flex flex-col sm:flex-row gap-2">
                 <button

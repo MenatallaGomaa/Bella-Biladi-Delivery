@@ -22,15 +22,10 @@ const nano = customAlphabet("0123456789", 6);
 let transporter;
 
 async function initTransporter() {
-  if (process.env.NODE_ENV === "production") {
-    // --- Gmail setup (for production) ---
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.error("❌ EMAIL_USER and EMAIL_PASS environment variables are required for production!");
-      console.error("❌ Email sending will not work until these are configured.");
-      transporter = null;
-      return;
-    }
-    
+  const hasGmailCreds = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+  // Use real Gmail whenever credentials are set (works on Render/Netlify API even if NODE_ENV differs)
+  if (hasGmailCreds) {
     transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -48,25 +43,32 @@ async function initTransporter() {
       console.error("❌ Please check your EMAIL_USER and EMAIL_PASS credentials");
       transporter = null;
     }
-  } else {
-    // --- Ethereal setup (for local development) ---
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-      console.log("📨 Using Ethereal test email account");
-      console.log(`👉 View emails at: https://ethereal.email/login`);
-      console.log(`📧 Test account: ${testAccount.user}`);
-    } catch (err) {
-      console.error("❌ Failed to create Ethereal test account:", err.message);
-      transporter = null;
-    }
+    return;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    console.error("❌ EMAIL_USER and EMAIL_PASS are required in production so customers receive order emails.");
+    transporter = null;
+    return;
+  }
+
+  // --- Ethereal (local dev only, no Gmail env) ---
+  try {
+    const testAccount = await nodemailer.createTestAccount();
+    transporter = nodemailer.createTransport({
+      host: "smtp.ethereal.email",
+      port: 587,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+    console.log("📨 Using Ethereal test email account (set EMAIL_USER + EMAIL_PASS to send real mail)");
+    console.log("👉 View emails at: https://ethereal.email/login");
+    console.log(`📧 Test account: ${testAccount.user}`);
+  } catch (err) {
+    console.error("❌ Failed to create Ethereal test account:", err.message);
+    transporter = null;
   }
 }
 await initTransporter();
@@ -666,13 +668,24 @@ r.post("/", async (req, res) => {
     // Full confirmation email still goes out when admin accepts the order in the dashboard
     setImmediate(() => {
       const run = async () => {
-        await Promise.allSettled([
+        const results = await Promise.allSettled([
           sendOrderReceivedAcknowledgement(order, customerInfo, user, total),
           sendOrderReceivedSms(order, customerInfo, total),
           transporter
             ? sendAdminNotification(order, cart, customerInfo, subtotal, total)
             : Promise.resolve(),
         ]);
+        const receipt = results[0];
+        if (receipt.status === "rejected") {
+          console.error("❌ Order receipt email promise rejected:", receipt.reason);
+        } else if (receipt.value && receipt.value.success === false) {
+          console.error(
+            "❌ Order receipt email not sent:",
+            receipt.value.error || "unknown",
+            "| ref:",
+            order.ref
+          );
+        }
       };
       run().catch((err) => console.error("❌ Post-order notifications error:", err.message));
     });

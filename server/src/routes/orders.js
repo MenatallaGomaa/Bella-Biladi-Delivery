@@ -374,12 +374,22 @@ async function sendOrderReceivedSms(order, customerInfo, totalCents) {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_FROM;
-  if (!sid || !token || !from) return;
+  if (!sid || !token || !from) {
+    console.warn(
+      `⚠️ SMS skipped for ${order.ref}: missing Twilio env (TWILIO_ACCOUNT_SID=${Boolean(
+        sid
+      )}, TWILIO_AUTH_TOKEN=${Boolean(token)}, TWILIO_PHONE_NUMBER/TWILIO_FROM=${Boolean(
+        from
+      )})`
+    );
+    return { success: false, error: "missing twilio env" };
+  }
 
-  const to = toE164De(customerInfo?.phone || "");
+  const rawPhone = customerInfo?.phone || "";
+  const to = toE164De(rawPhone);
   if (!to) {
-    console.log(`📱 SMS skipped for ${order.ref}: invalid or missing phone`);
-    return;
+    console.warn(`⚠️ SMS skipped for ${order.ref}: invalid/missing phone "${rawPhone}"`);
+    return { success: false, error: "invalid phone" };
   }
 
   const totalStr = (totalCents / 100).toFixed(2);
@@ -388,21 +398,36 @@ async function sendOrderReceivedSms(order, customerInfo, totalCents) {
   const auth = Buffer.from(`${sid}:${token}`).toString("base64");
   const params = new URLSearchParams({ To: to, From: from, Body: body });
 
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params.toString(),
-  });
+  try {
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      }
+    );
 
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`❌ Twilio SMS failed for ${order.ref}:`, res.status, text);
-    return;
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`❌ Twilio SMS failed for ${order.ref}:`, {
+        status: res.status,
+        body: text,
+        to,
+        from,
+      });
+      return { success: false, error: `twilio ${res.status}` };
+    }
+  } catch (err) {
+    console.error(`❌ Twilio SMS request error for ${order.ref}:`, err.message);
+    return { success: false, error: err.message };
   }
+
   console.log(`✅ Order receipt SMS sent to ${to} for ${order.ref}`);
+  return { success: true };
 }
 
 // ✅ Helper function to send admin notification email
@@ -668,6 +693,7 @@ r.post("/", async (req, res) => {
     // Full confirmation email still goes out when admin accepts the order in the dashboard
     setImmediate(() => {
       const run = async () => {
+        const labels = ["receiptEmail", "receiptSms", "adminNotification"];
         const results = await Promise.allSettled([
           sendOrderReceivedAcknowledgement(order, customerInfo, user, total),
           sendOrderReceivedSms(order, customerInfo, total),
@@ -675,17 +701,19 @@ r.post("/", async (req, res) => {
             ? sendAdminNotification(order, cart, customerInfo, subtotal, total)
             : Promise.resolve(),
         ]);
-        const receipt = results[0];
-        if (receipt.status === "rejected") {
-          console.error("❌ Order receipt email promise rejected:", receipt.reason);
-        } else if (receipt.value && receipt.value.success === false) {
-          console.error(
-            "❌ Order receipt email not sent:",
-            receipt.value.error || "unknown",
-            "| ref:",
-            order.ref
-          );
-        }
+
+        results.forEach((result, idx) => {
+          const label = labels[idx] || `task${idx}`;
+
+          if (result.status === "rejected") {
+            console.error(`❌ ${label} rejected for ${order.ref}:`, result.reason);
+            return;
+          }
+
+          if (result.value && result.value.success === false) {
+            console.error(`❌ ${label} not sent for ${order.ref}:`, result.value.error || "unknown");
+          }
+        });
       };
       run().catch((err) => console.error("❌ Post-order notifications error:", err.message));
     });

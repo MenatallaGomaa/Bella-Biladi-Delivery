@@ -1,11 +1,11 @@
 // Store hours configuration
-// Monday-Saturday: 11:00-22:00, Sunday: 11:00-23:00
+// Mon–Thu: 16:00–22:00; Fri–So: 11:00–22:00
 const STORE_HOURS = {
-  0: { open: 11, close: 23 }, // Sunday
-  1: { open: 11, close: 22 }, // Monday
-  2: { open: 11, close: 22 }, // Tuesday
-  3: { open: 11, close: 22 }, // Wednesday
-  4: { open: 11, close: 22 }, // Thursday
+  0: { open: 11, close: 22 }, // Sunday
+  1: { open: 16, close: 22 }, // Monday
+  2: { open: 16, close: 22 }, // Tuesday
+  3: { open: 16, close: 22 }, // Wednesday
+  4: { open: 16, close: 22 }, // Thursday
   5: { open: 11, close: 22 }, // Friday
   6: { open: 11, close: 22 }, // Saturday
 };

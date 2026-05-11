@@ -1,21 +1,9 @@
-import { isStoreOpen, getStoreHoursString } from "../utils/storeHours";
+import { STORE_HOURS } from "../utils/storeHours";
 
 export default function StoreHoursPopup({ onClose }) {
   const dayNames = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
   const now = new Date();
   const dayOfWeek = now.getDay();
-  const currentDayName = dayNames[dayOfWeek];
-
-  // Store hours configuration
-  const STORE_HOURS = {
-    0: { open: 11, close: 23 }, // Sunday
-    1: { open: 11, close: 22 }, // Monday
-    2: { open: 11, close: 22 }, // Tuesday
-    3: { open: 11, close: 22 }, // Wednesday
-    4: { open: 11, close: 22 }, // Thursday
-    5: { open: 11, close: 22 }, // Friday
-    6: { open: 11, close: 22 }, // Saturday
-  };
 
   const formatTime = (hour) => `${hour.toString().padStart(2, '0')}:00`;
 

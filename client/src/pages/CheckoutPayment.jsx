@@ -5,7 +5,7 @@ import { reverseGeocode, geocodeAddress } from "../utils/geocode";
 import { calculateDeliveryFee, getDeliveryFeeDescription, calculateDistance } from "../utils/deliveryFee";
 import { RESTAURANT_LOCATION } from "../utils/restaurantLocation";
 import DeliveryInfoPopup from "../components/DeliveryInfoPopup";
-import { isStoreOpen } from "../utils/storeHours";
+import { isStoreOpen, STORE_HOURS } from "../utils/storeHours";
 
 import userIcon from "/public/user.png";
 import homeIcon from "/public/home.png";
@@ -14,18 +14,6 @@ import chatIcon from "/public/chat.png";
 
 // Normalize API base URL - remove trailing slash to avoid double slashes
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
-
-// Store hours configuration
-// Monday-Saturday: 11:00-22:00, Sunday: 11:00-23:00
-const STORE_HOURS = {
-  0: { open: 11, close: 23 }, // Sunday
-  1: { open: 11, close: 22 }, // Monday
-  2: { open: 11, close: 22 }, // Tuesday
-  3: { open: 11, close: 22 }, // Wednesday
-  4: { open: 11, close: 22 }, // Thursday
-  5: { open: 11, close: 22 }, // Friday
-  6: { open: 11, close: 22 }, // Saturday
-};
 
 // Helper function to format date for display
 function formatDateLabel(date, isToday = false, isTomorrow = false) {
